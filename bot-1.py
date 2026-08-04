@@ -15,7 +15,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 # rồi lần sau chỉ cần sửa trong config.json, không cần sửa code nữa.
 CONFIG_FILE = 'config.json'
 _DEFAULT_TOKEN = "8665912079:AAF40ASx3CvRSSgrPagKVML_txyWInOkb6g"
-_DEFAULT_ADMIN_ID = 123456789  # <-- Nếu chưa có config.json, THAY SỐ NÀY bằng ID Telegram của mày
+_DEFAULT_ADMIN_ID = 8618983578  # <-- Nếu chưa có config.json, THAY SỐ NÀY bằng ID Telegram của mày
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
