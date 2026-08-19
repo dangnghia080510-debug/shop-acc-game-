@@ -139,8 +139,16 @@ select.inp{appearance:none}
   .card .suit{font-size:16px}.card .rank{font-size:12px}
 }
 </style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
+
+<!-- CONNECTING OVERLAY -->
+<div id="connOverlay" style="position:fixed;inset:0;background:#0d1f0f;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#f0c030;font-size:15px;font-weight:700;text-align:center;padding:20px">
+  <div style="font-size:40px">🃏</div>
+  <div id="connMsg">Đang kết nối máy chủ...</div>
+</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -275,31 +283,79 @@ select.inp{appearance:none}
 
 <script>
 // ======================================================
-// DATA LAYER — LocalStorage + BroadcastChannel
+// DATA LAYER — Firebase Realtime Database (works across devices)
 // ======================================================
-const BC = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('game_bai_v3') : null;
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin123';
 const ADMIN_COINS_INIT = 999999;
 const PLAYER_COINS_INIT = 500;
 
-function db_get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
-function db_set(k,v){localStorage.setItem(k,JSON.stringify(v))}
-function broadcast(data){if(BC)BC.postMessage(data)}
-if(BC)BC.onmessage=e=>onBroadcast(e.data);
+// ⚠️ PASTE YOUR OWN FIREBASE CONFIG HERE (see instructions sent with this file)
+const firebaseConfig = {
+  apiKey: "AIzaSyCyapf8zLqz31Jc7gMUweXrZk1ReP07dv0",
+  databaseURL: "https://nhantin-4ee06-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nhantin-4ee06"
+};
 
-function getUsers(){return db_get('gb_users')||{}}
-function saveUsers(u){db_set('gb_users',u);broadcast({type:'users_update'})}
-function getRooms(){return db_get('gb_rooms')||{}}
-function saveRooms(r){db_set('gb_rooms',r);broadcast({type:'rooms_update'})}
-function getRoom(id){return (getRooms())[id]||null}
-function updateRoom(id,room){const rs=getRooms();rs[id]=room;saveRooms(rs)}
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-// Init admin account
-(function initAdmin(){
-  const u=getUsers();
-  if(!u[ADMIN_USER]){u[ADMIN_USER]={username:ADMIN_USER,password:ADMIN_PASS,displayName:'👑 Admin',coins:ADMIN_COINS_INIT,isAdmin:true};saveUsers(u)}
-})();
+// Local in-memory cache, kept in sync with Firebase in real time.
+// null = "not loaded yet" so we never accidentally overwrite real data with an empty object.
+let localUsers = null;
+let localRooms = null;
+let firebaseReady = false;
+
+function getUsers(){return localUsers||{}}
+function saveUsers(u){localUsers=u;db.ref('users').set(u).catch(err=>console.error('saveUsers',err))}
+function getRooms(){return localRooms||{}}
+function saveRooms(r){localRooms=r;db.ref('rooms').set(r).catch(err=>console.error('saveRooms',err))}
+function getRoom(id){return getRooms()[id]||null}
+function updateRoom(id,room){
+  if(!localRooms)localRooms={};
+  localRooms[id]=room;
+  db.ref('rooms/'+id).set(room).catch(err=>console.error('updateRoom',err));
+}
+function removeRoom(id){
+  if(localRooms)delete localRooms[id];
+  db.ref('rooms/'+id).remove().catch(err=>console.error('removeRoom',err));
+}
+
+function checkFirebaseReady(){
+  if(localUsers!==null && localRooms!==null && !firebaseReady){
+    firebaseReady=true;
+    const ov=document.getElementById('connOverlay');
+    if(ov)ov.style.display='none';
+  }
+}
+
+db.ref('users').on('value', snap=>{
+  const firstLoad = localUsers===null;
+  localUsers = snap.val() || {};
+  if(firstLoad){
+    // Init admin account exactly once, only after we know the real server state
+    if(!localUsers[ADMIN_USER]){
+      localUsers[ADMIN_USER]={username:ADMIN_USER,password:ADMIN_PASS,displayName:'👑 Admin',coins:ADMIN_COINS_INIT,isAdmin:true};
+      saveUsers(localUsers);
+    }
+    checkFirebaseReady();
+  }
+  refreshMyCoin();
+  onBroadcast({type:'users_update'});
+}, err=>{
+  console.error('users listener error', err);
+  const ov=document.getElementById('connMsg');
+  if(ov)ov.textContent='Không kết nối được máy chủ. Kiểm tra cấu hình Firebase hoặc mạng.';
+});
+
+db.ref('rooms').on('value', snap=>{
+  const firstLoad = localRooms===null;
+  localRooms = snap.val() || {};
+  if(firstLoad)checkFirebaseReady();
+  onBroadcast({type:'rooms_update'});
+}, err=>{
+  console.error('rooms listener error', err);
+});
 
 // ======================================================
 // AUTH
@@ -317,6 +373,7 @@ function switchAuth(m){
 function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',3000)}
 
 function doAuth(){
+  if(!firebaseReady){toast('Đang kết nối máy chủ, vui lòng đợi giây lát...');return}
   const user=document.getElementById('authUser').value.trim();
   const pass=document.getElementById('authPass').value;
   const name=document.getElementById('authName').value.trim();
@@ -399,6 +456,7 @@ function updateMaxPlayersForGame(){
 }
 
 function createRoom(){
+  if(!firebaseReady){toast('Đang kết nối máy chủ, vui lòng đợi giây lát...');return}
   const name=document.getElementById('roomName').value.trim();
   const pass=document.getElementById('roomPass').value;
   const gameType=document.getElementById('gameType').value;
@@ -415,6 +473,7 @@ function createRoom(){
 }
 
 function joinRoom(){
+  if(!firebaseReady){toast('Đang kết nối máy chủ, vui lòng đợi giây lát...');return}
   const id=document.getElementById('joinId').value.trim().toUpperCase();
   const pass=document.getElementById('joinPass').value;
   if(!id||!pass){showErr('joinErr','Nhập ID và mật khẩu phòng');return}
@@ -474,7 +533,7 @@ function leaveRoom(){
   const room=getRoom(inRoom);
   if(room){
     room.players=room.players.filter(p=>p!==me.username);
-    if(room.players.length===0){const rs=getRooms();delete rs[inRoom];saveRooms(rs)}
+    if(room.players.length===0){removeRoom(inRoom)}
     else{if(room.host===me.username)room.host=room.players[0];updateRoom(inRoom,room)}
   }
   inRoom=null;stopPolling();
