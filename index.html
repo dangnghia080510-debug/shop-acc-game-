@@ -649,8 +649,15 @@
           lastSeen: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (err) {
-        errBox.textContent = err.code === "auth/email-already-in-use"
-          ? "Email đã được sử dụng" : "Đăng ký thất bại";
+        console.error("Đăng ký lỗi:", err.code, err.message);
+        const map = {
+          "auth/email-already-in-use": "Email đã được sử dụng",
+          "auth/invalid-email": "Email không hợp lệ",
+          "auth/weak-password": "Mật khẩu quá yếu (tối thiểu 6 ký tự)",
+          "auth/operation-not-allowed": "Đăng ký bằng Email/Password chưa được bật trong Firebase",
+          "auth/network-request-failed": "Lỗi kết nối mạng, vui lòng thử lại"
+        };
+        errBox.textContent = map[err.code] || `Đăng ký thất bại: ${err.code || err.message}`;
         errBox.classList.remove("hidden");
       }
     };
