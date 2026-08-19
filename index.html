@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat App - Nhắn tin realtime + Admin</title>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-storage-compat.js"></script>
+  <!-- Không dùng API/backend thật nào cả — toàn bộ dữ liệu (tài khoản, tin nhắn,
+       ảnh...) được lưu ngay trong trình duyệt (localStorage). Đây là bản "ảo"
+       chỉ để test/demo giao diện, không cần cấu hình Firebase hay bất kỳ API key nào. -->
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -418,7 +416,7 @@
       <form id="loginForm">
         <div class="form-group">
           <label>Email</label>
-          <input type="email" id="loginEmail" required placeholder="you@example.com" />
+          <input type="text" id="loginEmail" required placeholder="you@example.com" />
         </div>
         <div class="form-group">
           <label>Mật khẩu</label>
@@ -428,7 +426,6 @@
       </form>
 
       <div class="divider"><span>hoặc</span></div>
-      <button class="btn-google" id="googleLoginBtn">Đăng nhập với Google</button>
       <button class="btn-guest" id="guestLoginBtn">👤 Vào chơi bằng tài khoản ảo (khách)</button>
 
       <p class="auth-footer">
@@ -451,7 +448,7 @@
         </div>
         <div class="form-group">
           <label>Email</label>
-          <input type="email" id="regEmail" required placeholder="you@example.com" />
+          <input type="text" id="regEmail" required placeholder="you@example.com" />
         </div>
         <div class="form-group">
           <label>Mật khẩu</label>
@@ -463,9 +460,6 @@
         </div>
         <button type="submit" class="btn-primary" id="registerBtn">Đăng ký</button>
       </form>
-
-      <div class="divider"><span>hoặc</span></div>
-      <button class="btn-google" id="googleRegBtn">Đăng ký với Google</button>
 
       <p class="auth-footer">
         Đã có tài khoản? <a id="showLogin">Đăng nhập</a>
@@ -598,57 +592,243 @@
 
   <script>
     // =====================================================
-    // 1. CẤU HÌNH FIREBASE - BẮT BUỘC THAY BẰNG THÔNG TIN CỦA BẠN
-    // API key cũ trong bản trước đã KHÔNG CÒN HOẠT ĐỘNG (bị vô hiệu/xóa
-    // ở phía Firebase) nên mình đã gỡ bỏ hoàn toàn, không dùng lại.
-    // Cách lấy config MỚI của chính bạn:
-    //   1) Vào https://console.firebase.google.com → tạo dự án mới (miễn phí)
-    //   2) Vào biểu tượng bánh răng ⚙️ > Project settings > mục "Your apps"
-    //      → bấm biểu tượng Web "</>" để tạo Web App → Firebase sẽ đưa cho bạn
-    //      đúng 7 dòng bên dưới, copy dán đè vào đây.
-    //   3) Bật Authentication > Sign-in method: Email/Password, Google, Anonymous
-    //   4) Tạo Firestore Database + Storage (chế độ test hoặc rule cho phép user
-    //      đã đăng nhập đọc/ghi)
+    // 1. "BACKEND" GIẢ LẬP — KHÔNG DÙNG API / API KEY THẬT NÀO CẢ
+    // Đây là bản demo/trò chơi: toàn bộ tài khoản, tin nhắn, ảnh... được
+    // lưu ngay trong trình duyệt (localStorage), không gọi ra Internet,
+    // không cần Firebase hay bất kỳ dịch vụ nào khác. Vì vậy:
+    //   - Đăng ký là "ảo": nhập email/gmail sai định dạng vẫn đăng ký được,
+    //     chỉ cần khác với các email đã đăng ký trước đó trên CHÍNH trình
+    //     duyệt này.
+    //   - Dữ liệu chỉ tồn tại trên trình duyệt/thiết bị hiện tại (xóa cache
+    //     hoặc đổi trình duyệt/máy khác sẽ không thấy lại dữ liệu cũ).
+    //   - Không có tính năng đăng nhập Google thật (đã bỏ vì không cần API).
+    // Toàn bộ đoạn dưới đây mô phỏng lại đúng các hàm auth/db/storage mà
+    // phần code phía sau đang gọi, để không phải sửa lại toàn bộ ứng dụng.
     // =====================================================
-    const firebaseConfig = {
-      apiKey: "DÁN_API_KEY_CỦA_BẠN_VÀO_ĐÂY",
-      authDomain: "DÁN_AUTH_DOMAIN_CỦA_BẠN",
-      projectId: "DÁN_PROJECT_ID_CỦA_BẠN",
-      storageBucket: "DÁN_STORAGE_BUCKET_CỦA_BẠN",
-      messagingSenderId: "DÁN_SENDER_ID_CỦA_BẠN",
-      appId: "DÁN_APP_ID_CỦA_BẠN"
-    };
+    (function setupLocalBackend() {
+      const LS_PREFIX = "chatapp_";
+      const lsGet = (k, def) => { try { const v = localStorage.getItem(LS_PREFIX + k); return v ? JSON.parse(v) : def; } catch (e) { return def; } };
+      const lsSet = (k, v) => localStorage.setItem(LS_PREFIX + k, JSON.stringify(v));
+      const genId = () => "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 9);
 
-    // =====================================================
-    // 2. QUYỀN ADMIN — KHÔNG còn email admin gắn cứng trong code nữa.
-    // Cơ chế mới: "Admin chính chủ" (owner) được cấp tự động cho NGƯỜI ĐẦU
-    // TIÊN đăng ký/đăng nhập trên hệ thống của bạn (dựa vào tài liệu
-    // meta/appMeta trong Firestore, dùng transaction nên chỉ 1 người duy
-    // nhất giành được, kể cả khi có nhiều người bấm cùng lúc).
-    // - Chỉ Admin chính chủ (owner) mới thấy nút "Cấp Admin / Gỡ Admin"
-    //   để tạo/gỡ các admin phụ.
-    // - Admin phụ chỉ có quyền khóa/mở khóa tài khoản, KHÔNG được cấp
-    //   quyền admin cho người khác.
-    // - Không ai (kể cả admin phụ) khóa được tài khoản admin chính chủ.
-    // =====================================================
+      // ---- Dấu thời gian (thay cho FieldValue.serverTimestamp) ----
+      const SERVER_TS = { __serverTimestampSentinel: true };
+      const wrapTs = (ms) => ({ __ts: ms, toDate: () => new Date(ms), toMillis: () => ms });
+      const isTsRecord = (v) => v && typeof v === "object" && Object.prototype.hasOwnProperty.call(v, "__ts") && Object.keys(v).length === 1;
+      function resolveWrite(data) {
+        const out = {};
+        for (const k in data) out[k] = (data[k] === SERVER_TS) ? { __ts: Date.now() } : data[k];
+        return out;
+      }
+      function hydrateRead(data) {
+        if (!data) return data;
+        const out = { ...data };
+        for (const k in out) if (isTsRecord(out[k])) out[k] = wrapTs(out[k].__ts);
+        return out;
+      }
 
-    // =====================================================
-    // GHI CHÚ TRIỂN KHAI TRÊN GITHUB PAGES
-    // 1) Đẩy file này lên repo GitHub, bật GitHub Pages (Settings > Pages).
-    // 2) Vào Firebase Console > Authentication > Settings > Authorized domains
-    //    → thêm domain dạng: <ten-user>.github.io
-    // 3) Bật các phương thức đăng nhập cần dùng trong Authentication > Sign-in method:
-    //    Email/Password, Google, và Anonymous (cho nút "tài khoản ảo").
-    // 4) Kiểm tra Firestore Rules & Storage Rules cho phép user đã đăng nhập đọc/ghi.
-    // =====================================================
+      // ---- "Firestore" giả: các collection được lưu thành object trong localStorage ----
+      const listeners = {}; // tên collection -> [callback]
+      function notify(name) { (listeners[name] || []).forEach(fn => fn()); }
+      function attach(name, fn) {
+        (listeners[name] = listeners[name] || []).push(fn);
+        fn();
+        return () => { listeners[name] = (listeners[name] || []).filter(f => f !== fn); };
+      }
+      function loadColl(name) { return lsGet("coll_" + name, {}); }
+      function saveColl(name, obj) { lsSet("coll_" + name, obj); notify(name); }
+      function makeQuerySnapshot(docs) {
+        const wrapped = docs.map(d => ({ id: d.id, data: () => d.data }));
+        return { docs: wrapped, forEach: (fn) => wrapped.forEach(fn) };
+      }
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const storage = firebase.storage();
+      function docRef(name, id) {
+        return {
+          id,
+          async get() {
+            const all = loadColl(name);
+            const raw = all[id];
+            return { exists: !!raw, id, data: () => hydrateRead(raw) };
+          },
+          async set(data, opts) {
+            const all = loadColl(name);
+            const resolved = resolveWrite(data);
+            all[id] = (opts && opts.merge && all[id]) ? { ...all[id], ...resolved } : resolved;
+            saveColl(name, all);
+          },
+          async update(data) {
+            const all = loadColl(name);
+            all[id] = { ...(all[id] || {}), ...resolveWrite(data) };
+            saveColl(name, all);
+          },
+          collection(subName) { return collectionRef(`${name}__${id}__${subName}`); }
+        };
+      }
 
-    // Giữ đăng nhập lâu dài trên trình duyệt (không bị đăng xuất khi đóng tab/tắt máy)
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn("Persistence lỗi:", err));
+      function queryRef(name, wheres, orders) {
+        wheres = wheres || []; orders = orders || [];
+        return {
+          where(field, op, value) { return queryRef(name, [...wheres, { field, op, value }], orders); },
+          orderBy(field, dir) { return queryRef(name, wheres, [...orders, { field, dir: dir || "asc" }]); },
+          onSnapshot(cb) {
+            return attach(name, () => {
+              const all = loadColl(name);
+              let docs = Object.keys(all).map(id => ({ id, data: hydrateRead(all[id]) }));
+              wheres.forEach(w => {
+                docs = docs.filter(d => {
+                  const v = d.data[w.field];
+                  if (w.op === "array-contains") return Array.isArray(v) && v.includes(w.value);
+                  return v === w.value;
+                });
+              });
+              orders.forEach(o => {
+                docs.sort((a, b) => {
+                  const an = a.data[o.field]?.toMillis ? a.data[o.field].toMillis() : (a.data[o.field] || 0);
+                  const bn = b.data[o.field]?.toMillis ? b.data[o.field].toMillis() : (b.data[o.field] || 0);
+                  return o.dir === "desc" ? bn - an : an - bn;
+                });
+              });
+              cb(makeQuerySnapshot(docs));
+            });
+          }
+        };
+      }
+
+      function collectionRef(name) {
+        return {
+          doc(id) { return docRef(name, id || genId()); },
+          async add(data) { const id = genId(); await docRef(name, id).set(data); return { id }; },
+          where(field, op, value) { return queryRef(name, [{ field, op, value }]); },
+          orderBy(field, dir) { return queryRef(name, [], [{ field, dir: dir || "asc" }]); },
+          onSnapshot(cb) {
+            return attach(name, () => {
+              const all = loadColl(name);
+              cb(makeQuerySnapshot(Object.keys(all).map(id => ({ id, data: hydrateRead(all[id]) }))));
+            });
+          }
+        };
+      }
+
+      const db = {
+        collection: collectionRef,
+        async runTransaction(fn) {
+          const tx = {
+            get: (ref) => ref.get(),
+            set: (ref, data) => { ref.set(data); },
+            update: (ref, data) => { ref.update(data); }
+          };
+          return fn(tx);
+        }
+      };
+
+      // ---- "Auth" giả: tài khoản lưu cục bộ, không kiểm tra định dạng email ----
+      let currentUser = null;
+      const authListeners = [];
+      function loadAccounts() { return lsGet("accounts", {}); } // email(lowercase) -> {uid, password, displayName, photoURL}
+      function saveAccounts(t) { lsSet("accounts", t); }
+      function persistSession() {
+        if (currentUser) lsSet("session", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, photoURL: currentUser.photoURL, isAnonymous: currentUser.isAnonymous });
+        else localStorage.removeItem(LS_PREFIX + "session");
+      }
+      function fireAuth() { authListeners.forEach(cb => cb(currentUser)); }
+      function makeUser(uid, email, displayName, photoURL, isAnonymous) {
+        return {
+          uid, email: email || "", displayName: displayName || "", photoURL: photoURL || "", isAnonymous: !!isAnonymous,
+          async updateProfile({ displayName: dn, photoURL: pu } = {}) {
+            if (this === currentUser) {
+              if (dn !== undefined) currentUser.displayName = dn;
+              if (pu !== undefined) currentUser.photoURL = pu;
+              const accs = loadAccounts();
+              if (accs[currentUser.email]) {
+                if (dn !== undefined) accs[currentUser.email].displayName = dn;
+                if (pu !== undefined) accs[currentUser.email].photoURL = pu;
+                saveAccounts(accs);
+              }
+              persistSession();
+            }
+          }
+        };
+      }
+
+      const auth = {
+        async setPersistence() { /* luôn giữ đăng nhập, không cần làm gì thêm */ },
+        onAuthStateChanged(cb) {
+          authListeners.push(cb);
+          setTimeout(() => cb(currentUser), 0);
+          return () => { const i = authListeners.indexOf(cb); if (i >= 0) authListeners.splice(i, 1); };
+        },
+        async signInWithEmailAndPassword(emailRaw, password) {
+          const email = (emailRaw || "").trim().toLowerCase();
+          const accs = loadAccounts();
+          const rec = accs[email];
+          if (!rec || rec.password !== password) {
+            const err = new Error("Sai email hoặc mật khẩu"); err.code = "auth/invalid-credential"; throw err;
+          }
+          currentUser = makeUser(rec.uid, email, rec.displayName, rec.photoURL, false);
+          persistSession(); fireAuth();
+          return { user: currentUser };
+        },
+        async createUserWithEmailAndPassword(emailRaw, password) {
+          // Đăng ký "ảo": không kiểm tra định dạng email, gmail sai vẫn được,
+          // chỉ cần chưa từng đăng ký trên trình duyệt này.
+          const email = (emailRaw || "").trim().toLowerCase();
+          if (!email) { const err = new Error("Thiếu email"); err.code = "auth/invalid-email"; throw err; }
+          const accs = loadAccounts();
+          if (accs[email]) { const err = new Error("Email đã được sử dụng"); err.code = "auth/email-already-in-use"; throw err; }
+          const newUid = genId();
+          accs[email] = { uid: newUid, password: password || "", displayName: "", photoURL: "" };
+          saveAccounts(accs);
+          currentUser = makeUser(newUid, email, "", "", false);
+          persistSession(); fireAuth();
+          return { user: currentUser };
+        },
+        async signInAnonymously() {
+          currentUser = makeUser(genId(), "", "", "", true);
+          persistSession(); fireAuth();
+          return { user: currentUser };
+        },
+        async signOut() {
+          currentUser = null;
+          persistSession(); fireAuth();
+        }
+      };
+
+      // Khôi phục phiên đăng nhập đã lưu (nếu có) khi tải lại trang
+      const savedSession = lsGet("session", null);
+      if (savedSession) {
+        currentUser = makeUser(savedSession.uid, savedSession.email, savedSession.displayName, savedSession.photoURL, savedSession.isAnonymous);
+      }
+
+      // ---- "Storage" giả: lưu file dạng base64 trong localStorage (phù hợp
+      // với file nhỏ; vì đây là bản demo không dùng dịch vụ lưu trữ thật) ----
+      const storage = {
+        ref(path) {
+          const key = "file_" + path;
+          return {
+            async put(file) {
+              return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => { try { lsSet(key, reader.result); resolve(); } catch (e) { reject(e); } };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+              });
+            },
+            async getDownloadURL() { return lsGet(key, ""); }
+          };
+        }
+      };
+
+      window.auth = auth;
+      window.db = db;
+      window.storage = storage;
+      window.firebase = {
+        firestore: { FieldValue: { serverTimestamp: () => SERVER_TS } }
+      };
+    })();
+
+    const auth = window.auth;
+    const db = window.db;
+    const storage = window.storage;
 
     // =====================================================
     // BIẾN TOÀN CỤC
@@ -892,47 +1072,15 @@
           lastSeen: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (err) {
-        console.error("Đăng ký lỗi:", err.code, err.message);
         const map = {
-          "auth/email-already-in-use": "Email đã được sử dụng",
-          "auth/invalid-email": "Email không hợp lệ",
-          "auth/weak-password": "Mật khẩu quá yếu (tối thiểu 6 ký tự)",
-          "auth/operation-not-allowed": "Đăng ký bằng Email/Password chưa được bật trong Firebase",
-          "auth/network-request-failed": "Lỗi kết nối mạng, vui lòng thử lại"
+          "auth/email-already-in-use": "Email này đã được đăng ký trên thiết bị này rồi, hãy đăng nhập hoặc dùng email khác",
+          "auth/invalid-email": "Vui lòng nhập email"
         };
-        errBox.textContent = map[err.code] || `Đăng ký thất bại: ${err.code || err.message}`;
+        errBox.textContent = map[err.code] || "Đăng ký thất bại, vui lòng thử lại";
         errBox.classList.remove("hidden");
         shakeCard(errBox);
       }
     };
-
-    // Google login
-    async function loginWithGoogle() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      try {
-        const result = await auth.signInWithPopup(provider);
-        const user = result.user;
-        const ref = db.collection("users").doc(user.uid);
-        const snap = await ref.get();
-        if (!snap.exists) {
-          await ref.set({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || "Người dùng",
-            photoURL: user.photoURL || "",
-            bio: "",
-            role: "user",
-            banned: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-      } catch (err) {
-        toast("Đăng nhập Google thất bại", "error");
-      }
-    }
-    document.getElementById("googleLoginBtn").onclick = loginWithGoogle;
-    document.getElementById("googleRegBtn").onclick = loginWithGoogle;
 
     // Đăng nhập bằng tài khoản ảo (ẩn danh) - không cần email/mật khẩu
     document.getElementById("guestLoginBtn").onclick = async () => {
