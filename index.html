@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chat App - Nhắn tin realtime + Admin</title>
-  <meta name="description" content="Ứng dụng nhắn tin realtime với Firebase - hỗ trợ Admin, gửi ảnh/video/file" />
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
@@ -18,7 +17,6 @@
     :root {
       --primary: #0084ff;
       --primary-dark: #0066cc;
-      --primary-light: #e7f3ff;
       --bg: #f0f2f5;
       --sidebar-bg: #ffffff;
       --border: #e4e6eb;
@@ -29,8 +27,6 @@
       --danger: #e41e3f;
       --success: #31a24c;
       --admin: #f59e0b;
-      --shadow: 0 4px 20px rgba(0,0,0,0.08);
-      --radius: 12px;
     }
 
     body {
@@ -41,415 +37,252 @@
       overflow: hidden;
     }
 
-    /* ========== ANIMATIONS ========== */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes slideInLeft {
-      from { opacity: 0; transform: translateX(-20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes scaleIn {
-      from { opacity: 0; transform: scale(0.92); }
-      to { opacity: 1; transform: scale(1); }
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    @keyframes gradientMove {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    @keyframes messagePop {
-      from { opacity: 0; transform: scale(0.85) translateY(10px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-
     /* ========== AUTH ========== */
     .auth-container {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
-      background-size: 400% 400%;
-      animation: gradientMove 12s ease infinite;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       padding: 20px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .auth-container::before {
-      content: "";
-      position: absolute;
-      width: 300px; height: 300px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 50%;
-      top: -80px; left: -80px;
-      animation: float 6s ease-in-out infinite;
-    }
-    .auth-container::after {
-      content: "";
-      position: absolute;
-      width: 200px; height: 200px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 50%;
-      bottom: -40px; right: -40px;
-      animation: float 8s ease-in-out infinite reverse;
     }
 
     .auth-card {
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(12px);
-      border-radius: 20px;
+      background: white;
+      border-radius: 16px;
       padding: 36px 32px;
       width: 100%;
       max-width: 400px;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.2);
-      animation: scaleIn 0.45s ease;
-      position: relative;
-      z-index: 1;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
     }
 
-    .auth-card h1 {
-      font-size: 26px;
-      text-align: center;
-      margin-bottom: 6px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+    .auth-card h1 { font-size: 26px; text-align: center; margin-bottom: 6px; }
     .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; }
 
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
     .form-group input, .form-group textarea {
-      width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
-      border-radius: 12px; font-size: 15px; outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%; padding: 11px 13px; border: 1px solid var(--border);
+      border-radius: 10px; font-size: 15px; outline: none;
     }
-    .form-group input:focus, .form-group textarea:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0,132,255,0.15);
-    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
     .form-group input:disabled { background: #f5f5f5; color: var(--text-secondary); }
 
     .btn-primary {
-      width: 100%; padding: 13px; background: linear-gradient(135deg, #0084ff, #0066cc);
-      color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600;
-      cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+      width: 100%; padding: 12px; background: var(--primary); color: white;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
     }
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(0,132,255,0.35);
-    }
-    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .btn-google {
-      width: 100%; padding: 12px; background: white; border: 1.5px solid var(--border);
-      border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer;
-      margin-top: 10px; transition: background 0.2s, transform 0.15s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 11px; background: white; border: 1px solid var(--border);
+      border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 10px;
     }
-    .btn-google:hover { background: #f8f9fa; transform: translateY(-1px); }
-
-    .btn-demo {
-      width: 100%; padding: 12px; background: linear-gradient(135deg, #10b981, #059669);
-      color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600;
-      cursor: pointer; margin-top: 10px; transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .btn-demo:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(16,185,129,0.35);
-    }
+    .btn-google:hover { background: #f5f5f5; }
 
     .btn-danger {
       padding: 6px 12px; background: var(--danger); color: white;
-      border: none; border-radius: 8px; font-size: 12px; cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s;
+      border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
     }
-    .btn-danger:hover { opacity: 0.9; transform: scale(1.03); }
+    .btn-danger:hover { opacity: 0.9; }
 
     .btn-admin {
       padding: 6px 12px; background: var(--admin); color: white;
-      border: none; border-radius: 8px; font-size: 12px; cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s;
+      border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
     }
-    .btn-admin:hover { opacity: 0.9; transform: scale(1.03); }
 
     .divider {
-      display: flex; align-items: center; margin: 18px 0; color: var(--text-secondary); font-size: 13px;
+      display: flex; align-items: center; margin: 20px 0; color: var(--text-secondary); font-size: 13px;
     }
     .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
     .divider span { padding: 0 12px; }
 
     .auth-footer { text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-secondary); }
     .auth-footer a { color: var(--primary); text-decoration: none; font-weight: 600; cursor: pointer; }
-    .auth-footer a:hover { text-decoration: underline; }
 
     .error-box {
       background: #ffebee; color: var(--danger); padding: 10px 12px;
-      border-radius: 10px; margin-bottom: 14px; font-size: 13px;
-      animation: fadeIn 0.3s ease;
+      border-radius: 8px; margin-bottom: 14px; font-size: 13px;
     }
     .success-box {
       background: #e8f5e9; color: var(--success); padding: 10px 12px;
-      border-radius: 10px; margin-bottom: 14px; font-size: 13px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .loading-spinner {
-      display: inline-block; width: 18px; height: 18px;
-      border: 2.5px solid rgba(255,255,255,0.3);
-      border-top-color: white; border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      vertical-align: middle; margin-right: 6px;
+      border-radius: 8px; margin-bottom: 14px; font-size: 13px;
     }
 
     /* ========== APP LAYOUT ========== */
     .app-layout { display: none; height: 100vh; }
-    .app-layout.show { display: flex; animation: fadeIn 0.35s ease; }
+    .app-layout.show { display: flex; }
 
     .sidebar {
       width: 320px; background: var(--sidebar-bg); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; box-shadow: 2px 0 12px rgba(0,0,0,0.03);
+      display: flex; flex-direction: column;
     }
 
     .sidebar-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 14px 16px; border-bottom: 1px solid var(--border);
-      background: linear-gradient(to right, #fff, #f8faff);
     }
 
-    .user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; transition: opacity 0.2s; }
-    .user-info:hover { opacity: 0.85; }
+    .user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
     .user-info small { display: block; color: var(--text-secondary); font-size: 12px; }
 
     .avatar {
-      width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #0084ff, #667eea);
+      width: 40px; height: 40px; border-radius: 50%; background: var(--primary);
       color: white; display: flex; align-items: center; justify-content: center;
       font-weight: 600; overflow: hidden; flex-shrink: 0; font-size: 16px;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 2px 8px rgba(0,132,255,0.25);
     }
-    .avatar:hover { transform: scale(1.08); }
     .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .avatar.admin-badge {
-      box-shadow: 0 0 0 2.5px var(--admin), 0 2px 8px rgba(245,158,11,0.3);
-    }
+    .avatar.admin-badge { box-shadow: 0 0 0 2px var(--admin); }
 
     .btn-icon {
       background: none; border: none; font-size: 18px; cursor: pointer;
-      padding: 8px; border-radius: 50%; transition: background 0.2s, transform 0.15s;
+      padding: 6px 8px; border-radius: 50%;
     }
-    .btn-icon:hover { background: var(--bg); transform: scale(1.1); }
+    .btn-icon:hover { background: var(--bg); }
 
-    .search-box { padding: 12px 14px; }
+    .search-box { padding: 10px 14px; }
     .search-box input {
-      width: 100%; padding: 10px 16px; border: none; background: var(--bg);
-      border-radius: 22px; font-size: 14px; outline: none;
-      transition: box-shadow 0.2s;
+      width: 100%; padding: 9px 14px; border: none; background: var(--bg);
+      border-radius: 20px; font-size: 14px; outline: none;
     }
-    .search-box input:focus { box-shadow: 0 0 0 2px rgba(0,132,255,0.2); }
 
-    .tabs { display: flex; padding: 0 14px; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .tabs { display: flex; padding: 0 14px; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
     .tabs button {
-      flex: 1; min-width: 70px; padding: 8px; border: none; background: none; border-radius: 20px;
+      flex: 1; min-width: 70px; padding: 7px; border: none; background: none; border-radius: 18px;
       font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-secondary);
-      transition: all 0.2s;
     }
-    .tabs button:hover { background: #f0f2f5; }
-    .tabs button.active { background: #e7f3ff; color: var(--primary); font-weight: 600; }
+    .tabs button.active { background: #e7f3ff; color: var(--primary); }
     .tabs button.admin-tab.active { background: #fef3c7; color: #b45309; }
 
-    .chat-list { flex: 1; overflow-y: auto; scrollbar-width: thin; }
+    .chat-list { flex: 1; overflow-y: auto; }
 
     .chat-item {
-      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-      cursor: pointer; transition: background 0.2s, transform 0.15s;
-      animation: slideInLeft 0.3s ease;
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      cursor: pointer; transition: background 0.15s;
     }
-    .chat-item:hover { background: var(--bg); }
-    .chat-item.active {
-      background: linear-gradient(90deg, #e7f3ff, #f0f7ff);
-      border-left: 3px solid var(--primary);
-    }
+    .chat-item:hover, .chat-item.active { background: var(--bg); }
 
     .chat-info { flex: 1; min-width: 0; }
     .chat-info strong { display: block; font-size: 14px; }
     .last-msg {
       font-size: 12px; color: var(--text-secondary);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-top: 2px;
     }
 
-    .empty-list { text-align: center; color: var(--text-secondary); padding: 40px 16px; font-size: 13px; animation: fadeIn 0.4s; }
+    .empty-list { text-align: center; color: var(--text-secondary); padding: 30px 16px; font-size: 13px; }
 
     .main-content { flex: 1; display: flex; flex-direction: column; background: #fff; }
 
     .empty-state {
       flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; color: var(--text-secondary); animation: fadeIn 0.5s;
+      justify-content: center; color: var(--text-secondary);
     }
-    .empty-state .empty-icon {
-      font-size: 64px; margin-bottom: 16px; animation: float 3s ease-in-out infinite;
-      filter: drop-shadow(0 8px 16px rgba(0,0,0,0.08));
-    }
-    .empty-state h2 { margin-bottom: 8px; color: var(--text); font-size: 22px; }
-    .empty-state p { font-size: 14px; max-width: 280px; text-align: center; }
+    .empty-state h2 { margin-bottom: 6px; color: var(--text); }
 
     /* ========== CHAT ========== */
     .chat-window { display: none; flex-direction: column; height: 100%; }
-    .chat-window.show { display: flex; animation: fadeIn 0.3s ease; }
+    .chat-window.show { display: flex; }
 
     .chat-header {
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; gap: 10px;
       padding: 12px 18px; border-bottom: 1px solid var(--border);
-      background: linear-gradient(to right, #fff, #f8faff);
     }
     .chat-header small { display: block; color: var(--success); font-size: 12px; }
-    .chat-header small::before {
-      content: "●"; margin-right: 4px; animation: pulse 1.5s infinite;
-    }
 
     .messages {
       flex: 1; overflow-y: auto; padding: 16px; display: flex;
-      flex-direction: column; gap: 8px;
-      background: linear-gradient(180deg, #f8f9fa 0%, #f0f2f5 100%);
-      scrollbar-width: thin;
+      flex-direction: column; gap: 6px; background: #f8f9fa;
     }
 
     .message {
-      max-width: 70%; padding: 10px 14px; border-radius: 18px;
+      max-width: 70%; padding: 9px 13px; border-radius: 16px;
       position: relative; word-break: break-word; font-size: 14px;
-      animation: messagePop 0.3s ease;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .message.mine {
-      align-self: flex-end; background: linear-gradient(135deg, #0084ff, #0066cc);
-      color: white; border-bottom-right-radius: 4px;
+      align-self: flex-end; background: var(--msg-mine); color: white;
+      border-bottom-right-radius: 4px;
     }
     .message.theirs {
-      align-self: flex-start; background: white; color: var(--text);
-      border-bottom-left-radius: 4px; border: 1px solid var(--border);
+      align-self: flex-start; background: var(--msg-theirs); color: var(--text);
+      border-bottom-left-radius: 4px;
     }
-    .message .time { display: block; font-size: 11px; opacity: 0.7; margin-top: 4px; text-align: right; }
+    .message .time { display: block; font-size: 11px; opacity: 0.7; margin-top: 3px; text-align: right; }
 
-    .msg-image {
-      max-width: 240px; border-radius: 12px; display: block;
-      transition: transform 0.2s; cursor: pointer;
-    }
-    .msg-image:hover { transform: scale(1.03); }
-    .msg-video { max-width: 280px; border-radius: 12px; }
-    .msg-file { color: inherit; text-decoration: underline; font-weight: 500; }
+    .msg-image { max-width: 240px; border-radius: 10px; display: block; }
+    .msg-video { max-width: 280px; border-radius: 10px; }
+    .msg-file { color: inherit; text-decoration: underline; }
 
     .chat-input {
       display: flex; align-items: center; gap: 8px;
       padding: 12px 14px; border-top: 1px solid var(--border); background: white;
     }
     .chat-input input[type="text"] {
-      flex: 1; padding: 11px 16px; border: 1.5px solid var(--border);
-      border-radius: 24px; font-size: 14px; outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      flex: 1; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 22px; font-size: 14px; outline: none;
     }
-    .chat-input input[type="text"]:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(0,132,255,0.12);
-    }
+    .chat-input input[type="text"]:focus { border-color: var(--primary); }
 
     .btn-send {
-      padding: 11px 18px; background: linear-gradient(135deg, #0084ff, #0066cc);
-      color: white; border: none; border-radius: 24px; font-weight: 600;
-      cursor: pointer; font-size: 14px; transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .btn-send:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 14px rgba(0,132,255,0.35);
+      padding: 10px 16px; background: var(--primary); color: white;
+      border: none; border-radius: 22px; font-weight: 600; cursor: pointer; font-size: 14px;
     }
     .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* ========== PROFILE ========== */
-    .profile-page { display: none; padding: 30px; max-width: 480px; margin: 0 auto; overflow-y: auto; }
-    .profile-page.show { display: block; animation: fadeIn 0.35s ease; }
+    .profile-page { display: none; padding: 30px; max-width: 460px; margin: 0 auto; overflow-y: auto; }
+    .profile-page.show { display: block; }
     .profile-page h2 { margin-bottom: 20px; }
 
     .profile-card {
-      background: white; border-radius: 16px; padding: 32px;
+      background: white; border-radius: 14px; padding: 28px;
       border: 1px solid var(--border); text-align: center;
-      box-shadow: var(--shadow); animation: scaleIn 0.4s ease;
     }
 
     .avatar-large {
-      width: 110px; height: 110px; border-radius: 50%;
-      background: linear-gradient(135deg, #0084ff, #667eea);
+      width: 100px; height: 100px; border-radius: 50%; background: var(--primary);
       color: white; display: flex; align-items: center; justify-content: center;
-      font-size: 42px; font-weight: 600; margin: 0 auto 12px; overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,132,255,0.3);
-      transition: transform 0.3s;
+      font-size: 40px; font-weight: 600; margin: 0 auto 12px; overflow: hidden;
     }
-    .avatar-large:hover { transform: scale(1.05); }
     .avatar-large img { width: 100%; height: 100%; object-fit: cover; }
 
     .btn-change-photo {
       display: inline-block; margin-bottom: 22px; color: var(--primary);
       font-weight: 600; cursor: pointer; font-size: 13px;
-      transition: opacity 0.2s;
     }
-    .btn-change-photo:hover { opacity: 0.8; }
     .profile-card form { text-align: left; }
 
     /* ========== ADMIN PANEL ========== */
     .admin-page {
       display: none; padding: 24px; overflow-y: auto; height: 100%;
     }
-    .admin-page.show { display: block; animation: fadeIn 0.35s ease; }
+    .admin-page.show { display: block; }
 
-    .admin-page h2 { margin-bottom: 6px; }
+    .admin-page h2 { margin-bottom: 8px; }
     .admin-page .desc { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
 
     .admin-stats {
-      display: flex; gap: 14px; margin-bottom: 24px; flex-wrap: wrap;
+      display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
     }
     .stat-card {
-      background: white; border: 1px solid var(--border); border-radius: 14px;
-      padding: 18px 22px; min-width: 130px; text-align: center;
-      box-shadow: var(--shadow); transition: transform 0.2s, box-shadow 0.2s;
-      animation: scaleIn 0.4s ease;
+      background: white; border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px 20px; min-width: 120px; text-align: center;
     }
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    }
-    .stat-card .num { font-size: 30px; font-weight: 700; color: var(--primary); }
+    .stat-card .num { font-size: 28px; font-weight: 700; color: var(--primary); }
     .stat-card .label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 
     .admin-table {
       width: 100%; border-collapse: collapse; background: white;
-      border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
-      box-shadow: var(--shadow); animation: fadeIn 0.4s ease;
+      border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
     }
     .admin-table th, .admin-table td {
-      padding: 13px 14px; text-align: left; border-bottom: 1px solid var(--border);
+      padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border);
       font-size: 13px;
     }
     .admin-table th { background: #f8f9fa; font-weight: 600; }
     .admin-table tr:last-child td { border-bottom: none; }
-    .admin-table tr { transition: background 0.15s; }
-    .admin-table tr:hover { background: #fafbfc; }
     .admin-table .role-badge {
-      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
       font-size: 11px; font-weight: 600;
     }
     .role-badge.admin { background: #fef3c7; color: #b45309; }
@@ -458,15 +291,6 @@
 
     .hidden { display: none !important; }
 
-    /* Toast notification */
-    .toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-      background: #1a1a2e; color: white; padding: 12px 24px; border-radius: 12px;
-      font-size: 14px; z-index: 9999; opacity: 0; transition: all 0.35s ease;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.25); pointer-events: none;
-    }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
     @media (max-width: 700px) {
       .sidebar { width: 100%; }
       .main-content { display: none; }
@@ -474,37 +298,137 @@
       .app-layout.chat-open .main-content { display: flex; }
       .admin-table { font-size: 12px; }
       .admin-table th, .admin-table td { padding: 8px; }
-      .message { max-width: 85%; }
     }
+
+    /* ========== ANIMATIONS ========== */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+    @keyframes bubbleIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-16px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulseDot { 0%, 100% { box-shadow: 0 0 0 0 rgba(49,162,76,0.55); } 50% { box-shadow: 0 0 0 4px rgba(49,162,76,0); } }
+    @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
+    @keyframes countPulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+    @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+    .auth-container {
+      background-size: 200% 200%;
+      animation: gradientShift 12s ease infinite;
+    }
+    .auth-card { animation: popIn 0.35s ease; }
+    .auth-card.shake { animation: shake 0.4s; }
+
+    .app-layout.show { animation: fadeIn 0.4s ease; }
+    .chat-item { animation: fadeSlideUp 0.3s ease both; }
+    .message { animation: bubbleIn 0.25s ease both; }
+    .admin-table tbody tr { animation: fadeSlideUp 0.3s ease both; }
+    .profile-page.show .profile-card { animation: popIn 0.3s ease; }
+
+    .btn-primary, .btn-google, .btn-danger, .btn-admin, .btn-send, .btn-icon {
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .btn-primary:hover:not(:disabled), .btn-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,132,255,0.3); }
+    .btn-danger:hover, .btn-admin:hover { transform: translateY(-1px); }
+    .btn-icon:hover { transform: scale(1.08); }
+    .avatar { transition: transform 0.15s ease; }
+    .chat-item:hover .avatar { transform: scale(1.06); }
+
+    .stat-card .num.bump { animation: countPulse 0.4s ease; }
+
+    /* Loading splash while checking auth session */
+    #authLoading {
+      position: fixed; inset: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      gap: 14px; z-index: 9999; color: white; transition: opacity 0.35s ease;
+    }
+    #authLoading.hide { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 42px; height: 42px; border: 4px solid rgba(255,255,255,0.35);
+      border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    #authLoading span { font-size: 14px; opacity: 0.9; }
+
+    /* Toast notifications */
+    #toastContainer {
+      position: fixed; top: 18px; left: 50%; z-index: 10000;
+      display: flex; flex-direction: column; gap: 8px; align-items: center;
+    }
+    .toast {
+      background: #212121; color: #fff; padding: 10px 18px; border-radius: 10px;
+      font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      animation: toastIn 0.25s ease both; white-space: nowrap;
+    }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    .toast.info { background: #1877f2; }
+
+    /* Online status dot */
+    .avatar-wrap { position: relative; display: inline-flex; }
+    .online-dot {
+      position: absolute; bottom: -1px; right: -1px; width: 11px; height: 11px;
+      background: var(--success); border: 2px solid white; border-radius: 50%;
+      animation: pulseDot 2s infinite;
+    }
+
+    /* Guest login */
+    .btn-guest {
+      width: 100%; padding: 11px; background: #f0f2f5; border: 1px dashed #b0b3b8;
+      border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 10px;
+      color: var(--text-secondary);
+    }
+    .btn-guest:hover { background: #e4e6eb; }
+
+    .admin-search { margin-bottom: 14px; }
+    .admin-search input {
+      width: 100%; max-width: 320px; padding: 9px 14px; border: 1px solid var(--border);
+      border-radius: 20px; font-size: 13px; outline: none;
+    }
+    .admin-search input:focus { border-color: var(--primary); }
+
+    .typing-indicator { display: flex; gap: 3px; padding: 9px 13px; align-self: flex-start; }
+    .typing-indicator span {
+      width: 7px; height: 7px; background: var(--text-secondary); border-radius: 50%;
+      animation: pulseDot 1s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
   </style>
 </head>
 <body>
 
+  <!-- Splash / kiểm tra phiên đăng nhập -->
+  <div id="authLoading">
+    <div class="spinner"></div>
+    <span>Đang tải...</span>
+  </div>
+
+  <!-- Toast thông báo -->
+  <div id="toastContainer"></div>
+
   <!-- ========== MÀN HÌNH ĐĂNG NHẬP ========== -->
   <div id="loginPage" class="auth-container">
     <div class="auth-card">
-      <h1>💬 Chat App</h1>
+      <h1>Đăng nhập</h1>
       <p class="subtitle">Chào mừng trở lại!</p>
       <div id="loginError" class="error-box hidden"></div>
 
       <form id="loginForm">
         <div class="form-group">
           <label>Email</label>
-          <input type="email" id="loginEmail" required placeholder="you@example.com" autocomplete="email" />
+          <input type="email" id="loginEmail" required placeholder="you@example.com" />
         </div>
         <div class="form-group">
           <label>Mật khẩu</label>
-          <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password" />
+          <input type="password" id="loginPassword" required placeholder="••••••••" />
         </div>
         <button type="submit" class="btn-primary" id="loginBtn">Đăng nhập</button>
       </form>
 
       <div class="divider"><span>hoặc</span></div>
-      <button class="btn-google" id="googleLoginBtn">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Đăng nhập với Google
-      </button>
-      <button class="btn-demo" id="demoLoginBtn">🚀 Đăng nhập Demo (Tài khoản ảo)</button>
+      <button class="btn-google" id="googleLoginBtn">Đăng nhập với Google</button>
+      <button class="btn-guest" id="guestLoginBtn">👤 Vào chơi bằng tài khoản ảo (khách)</button>
 
       <p class="auth-footer">
         Chưa có tài khoản? <a id="showRegister">Đăng ký ngay</a>
@@ -515,35 +439,32 @@
   <!-- ========== MÀN HÌNH ĐĂNG KÝ ========== -->
   <div id="registerPage" class="auth-container hidden">
     <div class="auth-card">
-      <h1>✨ Đăng ký</h1>
+      <h1>Đăng ký</h1>
       <p class="subtitle">Tạo tài khoản mới</p>
       <div id="registerError" class="error-box hidden"></div>
 
       <form id="registerForm">
         <div class="form-group">
           <label>Tên hiển thị</label>
-          <input type="text" id="regName" required placeholder="Nguyễn Văn A" autocomplete="name" />
+          <input type="text" id="regName" required placeholder="Nguyễn Văn A" />
         </div>
         <div class="form-group">
           <label>Email</label>
-          <input type="email" id="regEmail" required placeholder="you@example.com" autocomplete="email" />
+          <input type="email" id="regEmail" required placeholder="you@example.com" />
         </div>
         <div class="form-group">
           <label>Mật khẩu</label>
-          <input type="password" id="regPassword" required placeholder="••••••••" minlength="6" autocomplete="new-password" />
+          <input type="password" id="regPassword" required placeholder="••••••••" minlength="6" />
         </div>
         <div class="form-group">
           <label>Xác nhận mật khẩu</label>
-          <input type="password" id="regConfirm" required placeholder="••••••••" autocomplete="new-password" />
+          <input type="password" id="regConfirm" required placeholder="••••••••" />
         </div>
         <button type="submit" class="btn-primary" id="registerBtn">Đăng ký</button>
       </form>
 
       <div class="divider"><span>hoặc</span></div>
-      <button class="btn-google" id="googleRegBtn">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Đăng ký với Google
-      </button>
+      <button class="btn-google" id="googleRegBtn">Đăng ký với Google</button>
 
       <p class="auth-footer">
         Đã có tài khoản? <a id="showLogin">Đăng nhập</a>
@@ -567,7 +488,7 @@
       </div>
 
       <div class="search-box">
-        <input type="text" id="searchInput" placeholder="🔍 Tìm kiếm..." />
+        <input type="text" id="searchInput" placeholder="Tìm kiếm..." />
       </div>
 
       <div class="tabs">
@@ -583,7 +504,6 @@
     <main class="main-content">
       <!-- Empty state -->
       <div id="emptyState" class="empty-state">
-        <div class="empty-icon">💬</div>
         <h2>Chào mừng đến Chat App</h2>
         <p>Chọn một cuộc trò chuyện hoặc tìm người để bắt đầu nhắn tin</p>
       </div>
@@ -602,7 +522,7 @@
         <form class="chat-input" id="chatForm">
           <button type="button" class="btn-icon" id="attachBtn" title="Gửi ảnh/video/file">📎</button>
           <input type="file" id="fileInput" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" hidden />
-          <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." autocomplete="off" />
+          <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." />
           <button type="submit" class="btn-send" id="sendBtn">Gửi</button>
         </form>
       </div>
@@ -613,7 +533,7 @@
         <div class="profile-card">
           <div class="avatar-large" id="profileAvatar"><span>U</span></div>
           <label class="btn-change-photo">
-            📷 Đổi ảnh đại diện
+            Đổi ảnh đại diện
             <input type="file" id="avatarInput" accept="image/*" hidden />
           </label>
           <form id="profileForm">
@@ -637,7 +557,7 @@
 
       <!-- Admin Panel -->
       <div id="adminPage" class="admin-page">
-        <h2>🛡️ Quản trị viên</h2>
+        <h2>Quản trị viên</h2>
         <p class="desc">Quản lý toàn bộ tài khoản người dùng trong hệ thống</p>
 
         <div class="admin-stats">
@@ -653,6 +573,10 @@
             <div class="num" id="statBanned">0</div>
             <div class="label">Bị khóa</div>
           </div>
+        </div>
+
+        <div class="admin-search">
+          <input type="text" id="adminSearchInput" placeholder="🔍 Tìm theo tên hoặc email..." />
         </div>
 
         <table class="admin-table">
@@ -671,12 +595,9 @@
     </main>
   </div>
 
-  <!-- Toast -->
-  <div id="toast" class="toast"></div>
-
   <script>
     // =====================================================
-    // 1. CẤU HÌNH FIREBASE
+    // 1. CẤU HÌNH FIREBASE - THAY BẰNG THÔNG TIN CỦA BẠN
     // =====================================================
     const firebaseConfig = {
       apiKey: "AIzaSyCyapf8zLqz31Jc7gMUweXrZk1ReP07dv0",
@@ -690,24 +611,32 @@
 
     // =====================================================
     // 2. EMAIL ADMIN
+    // Bất kỳ email nào trong danh sách này sẽ TỰ ĐỘNG thành Admin
+    // - khi đăng ký mới, HOẶC
+    // - ngay lần đăng nhập tiếp theo nếu tài khoản đã tồn tại từ trước
+    // => Muốn có quyền Admin: thêm email của bạn vào đây rồi đăng nhập lại.
     // =====================================================
     const ADMIN_EMAILS = [
       "anhnghia8510@gmail.com"
     ];
 
-    // Tài khoản Demo (ảo) - dùng để test nhanh trên GitHub Pages
-    const DEMO_EMAIL = "demo@chatapp.local";
-    const DEMO_PASSWORD = "demo123456";
-    const DEMO_NAME = "Người dùng Demo";
+    // =====================================================
+    // GHI CHÚ TRIỂN KHAI TRÊN GITHUB PAGES
+    // 1) Đẩy file này lên repo GitHub, bật GitHub Pages (Settings > Pages).
+    // 2) Vào Firebase Console > Authentication > Settings > Authorized domains
+    //    → thêm domain dạng: <ten-user>.github.io
+    // 3) Bật các phương thức đăng nhập cần dùng trong Authentication > Sign-in method:
+    //    Email/Password, Google, và Anonymous (cho nút "tài khoản ảo").
+    // 4) Kiểm tra Firestore Rules & Storage Rules cho phép user đã đăng nhập đọc/ghi.
+    // =====================================================
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
     const storage = firebase.storage();
 
-    // Lưu phiên đăng nhập lâu dài (không bị đăng xuất khi refresh / đóng tab)
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .catch(err => console.warn("Persistence error:", err));
+    // Giữ đăng nhập lâu dài trên trình duyệt (không bị đăng xuất khi đóng tab/tắt máy)
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn("Persistence lỗi:", err));
 
     // =====================================================
     // BIẾN TOÀN CỤC
@@ -716,9 +645,35 @@
     let userProfile = null;
     let selectedChat = null;
     let unsubscribeMessages = null;
-    let currentTab = "chats";
+    let currentTab = "chats"; // chats | users | admin
     let allChats = [];
     let allUsers = [];
+    let heartbeatInterval = null;
+    let authChecked = false;
+
+    // =====================================================
+    // TOAST THÔNG BÁO
+    // =====================================================
+    function toast(message, type = "info", duration = 3000) {
+      const container = document.getElementById("toastContainer");
+      const el = document.createElement("div");
+      el.className = `toast ${type}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.transition = "opacity 0.25s ease";
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 250);
+      }, duration);
+    }
+
+    function hideAuthLoading() {
+      if (authChecked) return;
+      authChecked = true;
+      const el = document.getElementById("authLoading");
+      el.classList.add("hide");
+      setTimeout(() => el.style.display = "none", 400);
+    }
 
     // =====================================================
     // DOM
@@ -734,47 +689,74 @@
     const adminPage = document.getElementById("adminPage");
 
     // =====================================================
-    // TOAST
-    // =====================================================
-    function showToast(msg, duration = 2500) {
-      const t = document.getElementById("toast");
-      t.textContent = msg;
-      t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), duration);
-    }
-
-    // =====================================================
     // AUTH
     // =====================================================
     auth.onAuthStateChanged(async (user) => {
       if (user) {
         currentUser = user;
-        const snap = await db.collection("users").doc(user.uid).get();
+        const ref = db.collection("users").doc(user.uid);
+        const snap = await ref.get();
         userProfile = snap.exists ? snap.data() : null;
+
+        // Nếu chưa có hồ sơ (vd. tài khoản khách/ẩn danh chưa từng lưu) thì tạo mới
+        if (!userProfile) {
+          const guestName = "Khách#" + user.uid.slice(0, 5).toUpperCase();
+          const role = ADMIN_EMAILS.includes(user.email) ? "admin" : "user";
+          userProfile = {
+            uid: user.uid,
+            email: user.email || "",
+            displayName: user.displayName || (user.isAnonymous ? guestName : "Người dùng"),
+            photoURL: user.photoURL || "",
+            bio: "",
+            role,
+            isGuest: !!user.isAnonymous,
+            banned: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          await ref.set(userProfile);
+        }
 
         // Kiểm tra nếu bị khóa
         if (userProfile?.banned) {
-          showToast("Tài khoản của bạn đã bị khóa bởi Admin.");
+          toast("Tài khoản của bạn đã bị khóa bởi Admin.", "error", 4000);
           await auth.signOut();
+          hideAuthLoading();
           return;
         }
 
-        // Cập nhật lastSeen
-        if (userProfile) {
-          db.collection("users").doc(user.uid).update({
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-          }).catch(() => {});
+        // Tự động cấp quyền Admin nếu email nằm trong ADMIN_EMAILS (kể cả tài khoản đã tạo trước đó)
+        if (ADMIN_EMAILS.includes(user.email) && userProfile.role !== "admin") {
+          await ref.update({ role: "admin" });
+          userProfile.role = "admin";
+          toast("Tài khoản của bạn đã được cấp quyền Admin", "success");
         }
 
         showApp();
         loadChats();
         loadAllUsers();
+        startHeartbeat();
       } else {
         currentUser = null;
         userProfile = null;
+        stopHeartbeat();
         showLogin();
       }
+      hideAuthLoading();
     });
+
+    // Ping "đang hoạt động" mỗi 45s để hiển thị trạng thái online trong Admin
+    function startHeartbeat() {
+      stopHeartbeat();
+      const ping = () => db.collection("users").doc(currentUser.uid)
+        .update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+      ping();
+      heartbeatInterval = setInterval(ping, 45000);
+    }
+    function stopHeartbeat() {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
 
     function isAdmin() {
       if (!userProfile) return false;
@@ -799,6 +781,7 @@
       app.classList.add("show");
       updateMyInfo();
 
+      // Hiện tab Admin nếu là admin
       const adminTab = document.getElementById("tabAdmin");
       if (isAdmin()) {
         adminTab.classList.remove("hidden");
@@ -813,50 +796,50 @@
     // Đăng nhập email
     document.getElementById("loginForm").onsubmit = async (e) => {
       e.preventDefault();
-      const email = document.getElementById("loginEmail").value.trim();
+      const email = document.getElementById("loginEmail").value;
       const password = document.getElementById("loginPassword").value;
       const errBox = document.getElementById("loginError");
-      const btn = document.getElementById("loginBtn");
       errBox.classList.add("hidden");
-      btn.disabled = true;
-      btn.innerHTML = '<span class="loading-spinner"></span> Đang đăng nhập...';
 
       try {
         await auth.signInWithEmailAndPassword(email, password);
-        showToast("Đăng nhập thành công! 🎉");
       } catch (err) {
         errBox.textContent = "Email hoặc mật khẩu không đúng";
         errBox.classList.remove("hidden");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Đăng nhập";
+        shakeCard(errBox);
       }
     };
+
+    function shakeCard(errBox) {
+      const card = errBox.closest(".auth-card");
+      if (!card) return;
+      card.classList.remove("shake");
+      void card.offsetWidth;
+      card.classList.add("shake");
+    }
 
     // Đăng ký
     document.getElementById("registerForm").onsubmit = async (e) => {
       e.preventDefault();
       const name = document.getElementById("regName").value.trim();
-      const email = document.getElementById("regEmail").value.trim();
+      const email = document.getElementById("regEmail").value;
       const password = document.getElementById("regPassword").value;
       const confirm = document.getElementById("regConfirm").value;
       const errBox = document.getElementById("registerError");
-      const btn = document.getElementById("registerBtn");
       errBox.classList.add("hidden");
 
       if (password !== confirm) {
         errBox.textContent = "Mật khẩu không khớp";
         errBox.classList.remove("hidden");
+        shakeCard(errBox);
         return;
       }
-
-      btn.disabled = true;
-      btn.innerHTML = '<span class="loading-spinner"></span> Đang tạo tài khoản...';
 
       try {
         const cred = await auth.createUserWithEmailAndPassword(email, password);
         await cred.user.updateProfile({ displayName: name });
 
+        // Tự động gán role admin nếu email nằm trong danh sách
         const role = ADMIN_EMAILS.includes(email) ? "admin" : "user";
 
         await db.collection("users").doc(cred.user.uid).set({
@@ -870,7 +853,6 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           lastSeen: firebase.firestore.FieldValue.serverTimestamp()
         });
-        showToast("Đăng ký thành công! 🎉");
       } catch (err) {
         console.error("Đăng ký lỗi:", err.code, err.message);
         const map = {
@@ -882,9 +864,7 @@
         };
         errBox.textContent = map[err.code] || `Đăng ký thất bại: ${err.code || err.message}`;
         errBox.classList.remove("hidden");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Đăng ký";
+        shakeCard(errBox);
       }
     };
 
@@ -910,64 +890,33 @@
             lastSeen: firebase.firestore.FieldValue.serverTimestamp()
           });
         }
-        showToast("Đăng nhập Google thành công! 🎉");
       } catch (err) {
-        console.error(err);
-        showToast("Đăng nhập Google thất bại");
+        toast("Đăng nhập Google thất bại", "error");
       }
     }
     document.getElementById("googleLoginBtn").onclick = loginWithGoogle;
     document.getElementById("googleRegBtn").onclick = loginWithGoogle;
 
-    // ========== ĐĂNG NHẬP DEMO (Tài khoản ảo) ==========
-    document.getElementById("demoLoginBtn").onclick = async () => {
-      const btn = document.getElementById("demoLoginBtn");
+    // Đăng nhập bằng tài khoản ảo (ẩn danh) - không cần email/mật khẩu
+    document.getElementById("guestLoginBtn").onclick = async () => {
+      const btn = document.getElementById("guestLoginBtn");
       btn.disabled = true;
-      btn.textContent = "⏳ Đang tạo tài khoản demo...";
-
+      btn.textContent = "Đang vào...";
       try {
-        // Thử đăng nhập trước
-        try {
-          await auth.signInWithEmailAndPassword(DEMO_EMAIL, DEMO_PASSWORD);
-          showToast("Đăng nhập Demo thành công! 🚀");
-          return;
-        } catch (e) {
-          // Nếu chưa có thì tạo mới
-        }
-
-        const cred = await auth.createUserWithEmailAndPassword(DEMO_EMAIL, DEMO_PASSWORD);
-        await cred.user.updateProfile({ displayName: DEMO_NAME });
-        await db.collection("users").doc(cred.user.uid).set({
-          uid: cred.user.uid,
-          email: DEMO_EMAIL,
-          displayName: DEMO_NAME,
-          photoURL: "",
-          bio: "Tài khoản demo để trải nghiệm Chat App",
-          role: "user",
-          banned: false,
-          isDemo: true,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        showToast("Tạo & đăng nhập Demo thành công! 🚀");
+        await auth.signInAnonymously();
+        // Hồ sơ (Khách#xxxxx) sẽ được tự tạo trong onAuthStateChanged
       } catch (err) {
         console.error(err);
-        if (err.code === "auth/email-already-in-use") {
-          showToast("Tài khoản Demo đã tồn tại, thử đăng nhập lại");
-        } else {
-          showToast("Không thể tạo tài khoản Demo: " + (err.message || err.code));
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "🚀 Đăng nhập Demo (Tài khoản ảo)";
+        toast("Không thể vào bằng tài khoản ảo. Hãy bật 'Anonymous' trong Firebase Auth.", "error", 5000);
       }
+      btn.disabled = false;
+      btn.textContent = "👤 Vào chơi bằng tài khoản ảo (khách)";
     };
 
     // Đăng xuất
-    document.getElementById("logoutBtn").onclick = async () => {
-      if (unsubscribeMessages) unsubscribeMessages();
-      await auth.signOut();
-      showToast("Đã đăng xuất");
+    document.getElementById("logoutBtn").onclick = () => {
+      stopHeartbeat();
+      auth.signOut();
     };
 
     // =====================================================
@@ -977,13 +926,16 @@
       const name = userProfile?.displayName || currentUser.displayName || "Người dùng";
       const photo = userProfile?.photoURL || currentUser.photoURL || "";
       document.getElementById("myName").textContent = name;
-      document.getElementById("myRoleLabel").textContent = isAdmin() ? "Admin • Xem trang cá nhân" : "Xem trang cá nhân";
+      let label = "Xem trang cá nhân";
+      if (isAdmin()) label = "Admin • Xem trang cá nhân";
+      else if (userProfile?.isGuest) label = "Tài khoản khách • Xem trang cá nhân";
+      document.getElementById("myRoleLabel").textContent = label;
       setAvatar(document.getElementById("myAvatar"), name, photo, isAdmin());
     }
 
     function setAvatar(el, name, photo, admin = false) {
       if (photo) {
-        el.innerHTML = `<img src="${photo}" alt="" loading="lazy" />`;
+        el.innerHTML = `<img src="${photo}" alt="" />`;
       } else {
         el.innerHTML = `<span>${(name || "U").charAt(0).toUpperCase()}</span>`;
       }
@@ -1079,14 +1031,19 @@
           (c.otherUser?.displayName || "").toLowerCase().includes(search)
         );
         if (filtered.length === 0) {
-          chatList.innerHTML = `<p class="empty-list">Chưa có cuộc trò chuyện nào<br><small>Sang tab "Mọi người" để bắt đầu</small></p>`;
+          chatList.innerHTML = `<p class="empty-list">Chưa có cuộc trò chuyện nào</p>`;
           return;
         }
-        filtered.forEach(chat => {
+        filtered.forEach((chat, i) => {
           const div = document.createElement("div");
           div.className = "chat-item" + (selectedChat?.id === chat.id ? " active" : "");
+          div.style.animationDelay = (i * 0.04) + "s";
+          const online = isOnline(chat.otherUser || {});
           div.innerHTML = `
-            <div class="avatar"></div>
+            <div class="avatar-wrap">
+              <div class="avatar"></div>
+              ${online ? '<span class="online-dot"></span>' : ''}
+            </div>
             <div class="chat-info">
               <strong>${escapeHtml(chat.otherUser?.displayName || "Người dùng")}</strong>
               <p class="last-msg">${escapeHtml(chat.lastMessage || "Bắt đầu chat")}</p>
@@ -1100,15 +1057,16 @@
           u.uid !== currentUser.uid &&
           (u.displayName || "").toLowerCase().includes(search)
         );
-        if (filtered.length === 0) {
-          chatList.innerHTML = `<p class="empty-list">Không tìm thấy người dùng</p>`;
-          return;
-        }
-        filtered.forEach(user => {
+        filtered.forEach((user, i) => {
           const div = document.createElement("div");
           div.className = "chat-item";
+          div.style.animationDelay = (i * 0.04) + "s";
+          const online = isOnline(user);
           div.innerHTML = `
-            <div class="avatar"></div>
+            <div class="avatar-wrap">
+              <div class="avatar"></div>
+              ${online ? '<span class="online-dot"></span>' : ''}
+            </div>
             <div class="chat-info">
               <strong>${escapeHtml(user.displayName || "Người dùng")}</strong>
               <p class="last-msg">${escapeHtml(user.bio || "Nhấn để nhắn tin")}</p>
@@ -1141,7 +1099,7 @@
       if (!isAdmin()) return;
       currentTab = "admin";
       setActiveTab("tabAdmin");
-      chatList.innerHTML = `<p class="empty-list">🛡️ Đang ở chế độ Admin</p>`;
+      chatList.innerHTML = `<p class="empty-list">Đang ở chế độ Admin</p>`;
       showAdminPage();
     };
 
@@ -1155,7 +1113,7 @@
     // =====================================================
     async function startChat(otherUser) {
       if (otherUser.banned) {
-        showToast("Người dùng này đã bị khóa");
+        toast("Người dùng này đã bị khóa", "error");
         return;
       }
       const existing = allChats.find(c =>
@@ -1211,21 +1169,22 @@
         .orderBy("createdAt", "asc")
         .onSnapshot((snap) => {
           messagesEl.innerHTML = "";
-          snap.forEach(doc => {
+          snap.forEach((doc, i) => {
             const msg = doc.data();
             const isMine = msg.senderId === currentUser.uid;
             const div = document.createElement("div");
             div.className = "message " + (isMine ? "mine" : "theirs");
+            div.style.animationDelay = Math.min(i * 0.02, 0.4) + "s";
 
             let content = "";
             if (msg.type === "text") {
               content = `<p>${escapeHtml(msg.text)}</p>`;
             } else if (msg.type === "image") {
-              content = `<a href="${msg.fileUrl}" target="_blank" rel="noopener"><img src="${msg.fileUrl}" class="msg-image" loading="lazy" /></a>`;
+              content = `<a href="${msg.fileUrl}" target="_blank"><img src="${msg.fileUrl}" class="msg-image" /></a>`;
             } else if (msg.type === "video") {
               content = `<video controls class="msg-video"><source src="${msg.fileUrl}" type="${msg.fileType || ''}"></video>`;
             } else if (msg.type === "file") {
-              content = `<a href="${msg.fileUrl}" target="_blank" rel="noopener" class="msg-file">📎 ${escapeHtml(msg.fileName || "File")}</a>`;
+              content = `<a href="${msg.fileUrl}" target="_blank" class="msg-file">📎 ${escapeHtml(msg.fileName || "File")}</a>`;
             }
 
             const time = msg.createdAt?.toDate
@@ -1253,22 +1212,17 @@
       if (!text || !selectedChat) return;
       input.value = "";
 
-      try {
-        await db.collection("chats").doc(selectedChat.id).collection("messages").add({
-          text,
-          senderId: currentUser.uid,
-          type: "text",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+      await db.collection("chats").doc(selectedChat.id).collection("messages").add({
+        text,
+        senderId: currentUser.uid,
+        type: "text",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
 
-        await db.collection("chats").doc(selectedChat.id).update({
-          lastMessage: text,
-          lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (err) {
-        console.error(err);
-        showToast("Gửi tin nhắn thất bại");
-      }
+      await db.collection("chats").doc(selectedChat.id).update({
+        lastMessage: text,
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
     };
 
     // Gửi file
@@ -1278,7 +1232,7 @@
       const file = e.target.files[0];
       if (!file || !selectedChat) return;
       if (file.size > 20 * 1024 * 1024) {
-        showToast("File quá lớn (tối đa 20MB)");
+        toast("File quá lớn (tối đa 20MB)", "error");
         return;
       }
 
@@ -1311,10 +1265,9 @@
           lastMessage: lastMsg,
           lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        showToast("Đã gửi file thành công");
       } catch (err) {
         console.error(err);
-        showToast("Gửi file thất bại");
+        toast("Gửi file thất bại", "error");
       }
 
       btn.textContent = "📎";
@@ -1336,11 +1289,11 @@
         await db.collection("users").doc(currentUser.uid).update({ displayName: name, bio });
         userProfile = { ...userProfile, displayName: name, bio };
         updateMyInfo();
-        msgBox.textContent = "✅ Lưu thành công!";
+        msgBox.textContent = "Lưu thành công!";
         msgBox.classList.remove("hidden");
         setTimeout(() => msgBox.classList.add("hidden"), 2500);
       } catch (err) {
-        showToast("Có lỗi xảy ra");
+        toast("Có lỗi xảy ra", "error");
       }
     };
 
@@ -1357,43 +1310,74 @@
         userProfile = { ...userProfile, photoURL: url };
         updateMyInfo();
         setAvatar(document.getElementById("profileAvatar"), userProfile.displayName, url, isAdmin());
-        showToast("Cập nhật ảnh thành công! 📷");
+        toast("Cập nhật ảnh thành công!", "success");
       } catch (err) {
-        showToast("Upload ảnh thất bại");
+        toast("Upload ảnh thất bại", "error");
       }
     };
 
     // =====================================================
     // ADMIN FUNCTIONS
     // =====================================================
+    function bumpNumber(id, value) {
+      const el = document.getElementById(id);
+      if (el.textContent != String(value)) {
+        el.textContent = value;
+        el.classList.remove("bump");
+        void el.offsetWidth; // restart animation
+        el.classList.add("bump");
+      }
+    }
+
     function updateAdminStats() {
-      document.getElementById("statUsers").textContent = allUsers.length;
-      document.getElementById("statChats").textContent = allChats.length;
-      document.getElementById("statBanned").textContent = allUsers.filter(u => u.banned).length;
+      bumpNumber("statUsers", allUsers.length);
+      bumpNumber("statChats", allChats.length);
+      bumpNumber("statBanned", allUsers.filter(u => u.banned).length);
+    }
+
+    function isOnline(user) {
+      const t = user.lastSeen?.toMillis?.();
+      return !!t && (Date.now() - t) < 2 * 60 * 1000; // hoạt động trong 2 phút gần nhất
     }
 
     function renderAdmin() {
       updateAdminStats();
       const tbody = document.getElementById("adminUserList");
+      const search = (document.getElementById("adminSearchInput")?.value || "").toLowerCase();
       tbody.innerHTML = "";
 
-      allUsers.forEach(user => {
+      const filtered = allUsers.filter(u =>
+        (u.displayName || "").toLowerCase().includes(search) ||
+        (u.email || "").toLowerCase().includes(search)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#999;padding:24px;">Không tìm thấy người dùng nào</td></tr>`;
+        return;
+      }
+
+      filtered.forEach((user, i) => {
         const tr = document.createElement("tr");
+        tr.style.animationDelay = (i * 0.03) + "s";
         const created = user.createdAt?.toDate
           ? user.createdAt.toDate().toLocaleDateString("vi-VN")
           : "—";
 
         let roleClass = "user";
-        let roleText = "User";
+        let roleText = user.isGuest ? "Khách" : "User";
         if (user.role === "admin") { roleClass = "admin"; roleText = "Admin"; }
         if (user.banned) { roleClass = "banned"; roleText = "Đã khóa"; }
 
         const isMe = user.uid === currentUser.uid;
+        const online = isOnline(user);
 
         tr.innerHTML = `
           <td>
             <div style="display:flex;align-items:center;gap:8px;">
-              <div class="avatar" style="width:32px;height:32px;font-size:13px;"></div>
+              <div class="avatar-wrap">
+                <div class="avatar" style="width:32px;height:32px;font-size:13px;"></div>
+                ${online ? '<span class="online-dot" style="width:9px;height:9px;"></span>' : ''}
+              </div>
               <strong>${escapeHtml(user.displayName || "—")}</strong>
             </div>
           </td>
@@ -1418,28 +1402,30 @@
       });
     }
 
+    document.getElementById("adminSearchInput")?.addEventListener("input", renderAdmin);
+
     // Các hàm admin (gắn vào window để onclick hoạt động)
     window.banUser = async function(uid) {
       if (!confirm("Bạn chắc chắn muốn khóa tài khoản này?")) return;
       await db.collection("users").doc(uid).update({ banned: true });
-      showToast("Đã khóa tài khoản");
+      toast("Đã khóa tài khoản", "success");
     };
 
     window.unbanUser = async function(uid) {
       await db.collection("users").doc(uid).update({ banned: false });
-      showToast("Đã mở khóa tài khoản");
+      toast("Đã mở khóa tài khoản", "success");
     };
 
     window.makeAdmin = async function(uid) {
       if (!confirm("Cấp quyền Admin cho người này?")) return;
       await db.collection("users").doc(uid).update({ role: "admin" });
-      showToast("Đã cấp quyền Admin");
+      toast("Đã cấp quyền Admin", "success");
     };
 
     window.removeAdmin = async function(uid) {
       if (!confirm("Gỡ quyền Admin của người này?")) return;
       await db.collection("users").doc(uid).update({ role: "user" });
-      showToast("Đã gỡ quyền Admin");
+      toast("Đã gỡ quyền Admin", "success");
     };
   </script>
 </body>
