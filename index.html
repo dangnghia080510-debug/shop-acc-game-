@@ -551,12 +551,15 @@ function joinRoom(){
   const room=getRoom(id);
   if(!room){showErr('joinErr','Phòng không tồn tại');return}
   if(room.pass!==pass){showErr('joinErr','Sai mật khẩu phòng');return}
-  if(room.players.length>=room.max){showErr('joinErr','Phòng đã đầy');return}
-  if(room.status!=='waiting'){showErr('joinErr','Ván bài đang diễn ra');return}
-  if(!room.players.includes(me.username)){
-    room.players.push(me.username);
-    updateRoom(id,room);
+  // If already in the room (e.g. reconnecting), just enter
+  if(room.players.includes(me.username)){
+    inRoom=id;enterRoom(id);return;
   }
+  // Only allow joining during waiting phase
+  if(room.status!=='waiting'){showErr('joinErr','Ván bài đang diễn ra, không thể vào lúc này');return}
+  if(room.players.length>=room.max){showErr('joinErr','Phòng đã đầy');return}
+  room.players.push(me.username);
+  updateRoom(id,room);
   inRoom=id;
   enterRoom(id);
 }
@@ -626,9 +629,9 @@ function refreshRoom(){
   if(!inRoom)return;
   const room=getRoom(inRoom);
   if(!room){leaveRoom();return}
-  // Make sure current player is still in room
+  // If player was removed (e.g. room deleted), go back to lobby
   if(!room.players.includes(me.username)){
-    if(room.status==='waiting'){room.players.push(me.username);updateRoom(inRoom,room)}
+    leaveRoom();return;
   }
   document.getElementById('roomTitleDisp').textContent=room.name;
   document.getElementById('roomSubDisp').textContent=gameTypeLabel(room.gameType)+(room.gameType==='baucua'?' · Tự chọn mức cược':' · Mức cược: 🪙'+room.bet);
@@ -934,10 +937,15 @@ function tlBeats(played,pile){
 function startTienLen(room,users){
   const deck=shuffle(fullDeck());
   const hands={};
-  const perPlayer=Math.floor(deck.length/room.players.length);
+  const n=room.players.length;
+  // Deal all 52 cards evenly (13 each for 4p, 17 each for 3p, 26 each for 2p)
+  const perPlayer=Math.floor(52/n);
   room.players.forEach((p,i)=>{
     hands[p]=tlSort(deck.slice(i*perPlayer,(i+1)*perPlayer));
   });
+  // Give leftover cards to first player (rare edge case)
+  const leftover=deck.slice(n*perPlayer);
+  if(leftover.length>0){hands[room.players[0]]=tlSort([...hands[room.players[0]],...leftover])}
   // Find who has 3♠ → goes first
   let firstPlayer=room.players[0];
   room.players.forEach(p=>{if(hands[p].some(c=>c.r==='3'&&c.s==='♠'))firstPlayer=p});
@@ -993,10 +1001,12 @@ function renderTienLen(room){
   // My hand (big, selectable)
   html+=`<div class="center-area"><div class="pname" style="margin-bottom:8px">🂡 Bài của bạn (${myHand.length} lá)</div>
   <div class="my-hand" id="myHandEl">`;
-  myHand.forEach((c,i)=>{
+  myHand.forEach((c)=>{
     const sel=tlSelected.some(s=>s.r===c.r&&s.s===c.s);
     const isRed=SUITS_COLOR[c.s]==='red';
-    html+=`<div class="card${sel?' selected':''}${isRed?' red':''}" onclick="tlToggleCard(${i})">
+    // Use card identity string instead of index to avoid re-sort mismatch
+    const cardKey=encodeURIComponent(c.r+'|'+c.s);
+    html+=`<div class="card${sel?' selected':''}${isRed?' red':''}" onclick="tlToggleCard('${cardKey}')">
       <span class="rank">${c.r}${c.s}</span><span class="suit">${c.s}</span><span class="rank-bot">${c.r}${c.s}</span></div>`;
   });
   html+=`</div>`;
@@ -1018,11 +1028,15 @@ function renderTienLen(room){
   gc.innerHTML=html;
 }
 
-window.tlToggleCard=function(i){
+window.tlToggleCard=function(cardKey){
   const room=getRoom(inRoom);
   if(!room||room.gameState?.turnPlayer!==me.username)return;
   const myHand=tlSort(room.gameState.hands[me.username]||[]);
-  const card=myHand[i];
+  // Decode the card key "rank|suit"
+  const decoded=decodeURIComponent(cardKey);
+  const [r,s]=decoded.split('|');
+  const card=myHand.find(c=>c.r===r&&c.s===s);
+  if(!card)return;
   const idx=tlSelected.findIndex(c=>c.r===card.r&&c.s===card.s);
   if(idx>=0)tlSelected.splice(idx,1);
   else tlSelected.push(card);
@@ -1103,17 +1117,37 @@ const BC_SYMBOLS=[
 let bcChipValue=10;
 
 function startBauCua(room,users){
+  if(bcRollingTimer){clearTimeout(bcRollingTimer);bcRollingTimer=null;}
   room.status='playing';
   room.gameState={phase:'betting',bets:{},dice:null,results:{}};
   updateRoom(inRoom,room);
 }
 
+// Track rolling animation timer to avoid duplicate timers
+let bcRollingTimer=null;
 function renderBauCua(room){
   const gs=room.gameState;
   const gc=document.getElementById('gameContent');
   const users=getUsers();
   const isHost=room.host===me.username;
   const myBets=(gs.bets&&gs.bets[me.username])||{};
+  // If rolling phase with results already available, schedule local transition to done
+  if(gs.phase==='rolling'&&gs.results&&!bcRollingTimer){
+    bcRollingTimer=setTimeout(()=>{
+      bcRollingTimer=null;
+      if(isHost){
+        // Host writes the done state
+        const r2=getRoom(inRoom);
+        if(r2&&r2.gameState?.phase==='rolling'){
+          r2.gameState.phase='done';
+          updateRoom(inRoom,r2);
+        }
+      }
+      // All clients re-render locally to show result
+      const r2=getRoom(inRoom);
+      if(r2)renderBauCua(r2);
+    },1800);
+  }
 
   let html=`<div class="tl-table">`;
 
@@ -1201,13 +1235,17 @@ window.bcBet=function(symbolId){
   if(!gs||gs.phase!=='betting')return;
   const amt=bcChipValue;
   const users=getUsers();
-  if((users[me.username]?.coins||0)<amt){toast('Không đủ xu!');return}
+  const myCoins=users[me.username]?.coins||0;
+  if(myCoins<amt){toast('Không đủ xu!');return}
   users[me.username].coins-=amt;
   saveUsers(users);
+  if(!gs.bets)gs.bets={};
   if(!gs.bets[me.username])gs.bets[me.username]={};
   gs.bets[me.username][symbolId]=(gs.bets[me.username][symbolId]||0)+amt;
   room.gameState=gs;
   updateRoom(inRoom,room);
+  // Re-render immediately so bet badge shows without waiting for poll
+  renderBauCua(room);
 }
 window.bcClearBets=function(){
   const room=getRoom(inRoom);
@@ -1230,16 +1268,7 @@ window.bcRoll=function(){
   const gs=room.gameState;
   if(!gs||gs.phase!=='betting')return;
   const dice=[0,0,0].map(()=>BC_SYMBOLS[Math.floor(Math.random()*6)].id);
-  gs.dice=dice;gs.phase='rolling';
-  room.gameState=gs;
-  updateRoom(inRoom,room);
-  setTimeout(()=>bcSettle(),1600);
-}
-function bcSettle(){
-  const room=getRoom(inRoom);
-  if(!room||room.host!==me.username)return;
-  const gs=room.gameState;
-  if(!gs||gs.phase!=='rolling')return;
+  // Calculate results immediately, then set phase to rolling for animation
   const users=getUsers();
   const results={};
   room.players.forEach(p=>{
@@ -1248,7 +1277,7 @@ function bcSettle(){
     Object.keys(mine).forEach(sym=>{
       const amt=mine[sym];
       staked+=amt;
-      const k=gs.dice.filter(d=>d===sym).length;
+      const k=dice.filter(d=>d===sym).length;
       if(k>0){
         returned+=amt*(1+k);
         if(users[p])users[p].coins+=amt*(1+k);
@@ -1257,9 +1286,18 @@ function bcSettle(){
     results[p]={net:returned-staked};
   });
   saveUsers(users);
-  gs.results=results;gs.phase='done';
+  gs.dice=dice;
+  gs.results=results;
+  gs.phase='rolling'; // show rolling animation first
   room.gameState=gs;
   updateRoom(inRoom,room);
+  // After animation, switch to done — host writes this once
+  setTimeout(()=>{
+    const r2=getRoom(inRoom);
+    if(!r2||r2.gameState?.phase!=='rolling')return;
+    r2.gameState.phase='done';
+    updateRoom(inRoom,r2);
+  },1800);
 }
 
 // ======================================================
