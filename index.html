@@ -277,12 +277,20 @@ select.inp{appearance:none}
 <div id="adminPanel">
   <div class="admin-card">
     <h3>⚙️ Bảng Admin</h3>
-    <div id="adminUserList"></div>
-    <div style="margin-top:10px;display:flex;gap:8px">
+    <div id="adminCoinInfo" style="text-align:center;margin-bottom:12px;font-size:15px;color:var(--gold);font-weight:700">🪙 Admin: 0</div>
+    <div id="adminUserList" style="max-height:180px;overflow-y:auto;margin-bottom:10px"></div>
+    <div style="margin-top:6px;display:flex;gap:8px">
       <input class="inp" id="giveCoinsAmt" type="number" placeholder="Số xu" style="margin:0;flex:1"/>
       <button class="btn btn-sm btn-gold" onclick="giveCoinsSelected()" style="margin:0">Cấp xu</button>
+      <button class="btn btn-sm btn-red" onclick="deductCoinsSelected()" style="margin:0">Trừ xu</button>
     </div>
-    <p style="font-size:11px;color:#6a9a70;margin:8px 0">Chọn người chơi ở trên rồi nhấn cấp xu</p>
+    <p style="font-size:11px;color:#6a9a70;margin:8px 0">Chọn người chơi rồi Cấp / Trừ xu</p>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn btn-sm btn-green" onclick="addAdminCoins()" style="margin:0;flex:1">+ Xu Admin</button>
+      <button class="btn btn-sm btn-red" onclick="deductAdminCoins()" style="margin:0;flex:1">− Xu Admin</button>
+    </div>
+    <button class="btn btn-sm btn-gold" style="margin-top:10px" onclick="collectAllToAdmin()">📥 Trừ xu TẤT CẢ người chơi → cộng vào Admin</button>
+    <p style="font-size:11px;color:#6a9a70;margin:6px 0">Lấy toàn bộ xu của mọi tài khoản (trừ admin) chuyển vào Admin</p>
     <button class="btn btn-gray btn-sm" style="margin-top:8px" onclick="closeAdmin()">Đóng</button>
   </div>
 </div>
@@ -311,7 +319,7 @@ select.inp{appearance:none}
     </div>
     <div class="chat-msgs" id="chatMsgs"></div>
     <div class="chat-inp-row">
-      <input id="chatInp" placeholder="Nhắn gì đó..." onkeydown="if(e.key==='Enter')sendChat()"/>
+      <input id="chatInp" placeholder="Nhắn gì đó..." onkeydown="if(event.key==='Enter')sendChat()"/>
       <button onclick="sendChat()">Gửi</button>
     </div>
   </div>
@@ -833,6 +841,7 @@ window.bjHit=function(){
   const room=getRoom(inRoom);
   if(!room||room.gameState?.turnPlayer!==me.username)return;
   const gs=room.gameState;
+  if(!gs.deck||gs.deck.length===0){toast('Hết bài!');return}
   const card=gs.deck.pop();
   gs.hands[me.username].push(card);
   const score=bj_value(gs.hands[me.username]);
@@ -848,6 +857,7 @@ window.bjDouble=function(){
   const room=getRoom(inRoom);
   const gs=room.gameState;
   if(!gs||gs.turnPlayer!==me.username)return;
+  if(!gs.deck||gs.deck.length===0){toast('Hết bài!');return}
   const users=getUsers();
   if((users[me.username]?.coins||0)<room.bet){toast('Không đủ xu!');return}
   users[me.username].coins-=room.bet;
@@ -879,22 +889,41 @@ window.bjDealerPlay=function(){
   // Reveal dealer card
   gs.hands['__dealer']=gs.hands['__dealer'].map(c=>({...c,hidden:false}));
   // Dealer draws until 17+
-  while(bj_value(gs.hands['__dealer'])<17)gs.hands['__dealer'].push(gs.deck.pop());
+  while(bj_value(gs.hands['__dealer'])<17){
+    if(!gs.deck||gs.deck.length===0)break;
+    gs.hands['__dealer'].push(gs.deck.pop());
+  }
   const dealerScore=bj_value(gs.hands['__dealer']);
   const dealerBust=dealerScore>21;
   const users=getUsers();
+  const hostUser=room.host;
   gs.results={};
   room.players.forEach(p=>{
     const pScore=bj_value(gs.hands[p]);
     const pBust=pScore>21;
     const bet=gs.bets[p];
     let type,amount;
-    if(pBust){type='lose';amount=bet}
-    else if(dealerBust||pScore>dealerScore){type='win';amount=bet;users[p].coins+=bet*2}
-    else if(pScore===dealerScore){type='draw';amount=0;users[p].coins+=bet}
-    else{type='lose';amount=bet}
+    if(pBust){
+      // Player loses → coins already deducted, add to host (nhà cái)
+      type='lose';amount=bet;
+      if(users[hostUser] && p!==hostUser) users[hostUser].coins += bet;
+    } else if(dealerBust || pScore > dealerScore){
+      // Player wins → host pays 1:1 (player gets bet back + win = +2*bet total from bank)
+      type='win';amount=bet;
+      if(users[p]) users[p].coins += bet * 2;
+      if(users[hostUser] && p!==hostUser) users[hostUser].coins = Math.max(0, (users[hostUser].coins || 0) - bet);
+    } else if(pScore === dealerScore){
+      // Draw → refund bet
+      type='draw';amount=0;
+      if(users[p]) users[p].coins += bet;
+    } else {
+      // Player loses to higher dealer
+      type='lose';amount=bet;
+      if(users[hostUser] && p!==hostUser) users[hostUser].coins += bet;
+    }
     gs.results[p]={type,amount};
   });
+  // If host also played as player, their own bet vs dealer is handled above; net for host is the bank adjustments
   saveUsers(users);
   gs.phase='done';room.gameState=gs;updateRoom(inRoom,room);
 }
@@ -1268,9 +1297,11 @@ window.bcRoll=function(){
   const gs=room.gameState;
   if(!gs||gs.phase!=='betting')return;
   const dice=[0,0,0].map(()=>BC_SYMBOLS[Math.floor(Math.random()*6)].id);
-  // Calculate results immediately, then set phase to rolling for animation
+  // Calculate results — host (nhà cái) is the bank: loses pay host, wins paid by host
   const users=getUsers();
+  const hostUser=room.host;
   const results={};
+  let hostDelta=0; // positive = host gains
   room.players.forEach(p=>{
     const mine=gs.bets[p]||{};
     let staked=0,returned=0;
@@ -1279,12 +1310,24 @@ window.bcRoll=function(){
       staked+=amt;
       const k=dice.filter(d=>d===sym).length;
       if(k>0){
+        // Payout: stake back + k * stake (1:1 per match)
         returned+=amt*(1+k);
-        if(users[p])users[p].coins+=amt*(1+k);
       }
     });
-    results[p]={net:returned-staked};
+    const net=returned-staked;
+    results[p]={net};
+    if(users[p]){
+      if(returned>0) users[p].coins += returned; // give stake back + winnings
+      // staked was already deducted when betting
+    }
+    // Host bank: if player net >0 host pays the net win; if net <0 host gains the |net|
+    if(p !== hostUser){
+      hostDelta -= net; // if player net positive, host loses that amount
+    }
   });
+  if(users[hostUser]){
+    users[hostUser].coins = Math.max(0, (users[hostUser].coins || 0) + hostDelta);
+  }
   saveUsers(users);
   gs.dice=dice;
   gs.results=results;
@@ -1314,6 +1357,8 @@ function renderAdminUsers(){
   const users=getUsers();
   const el=document.getElementById('adminUserList');
   el.innerHTML='';
+  const adminU=users[ADMIN_USER];
+  document.getElementById('adminCoinInfo').textContent='🪙 Admin: '+(adminU?adminU.coins:0);
   Object.values(users).filter(u=>u.username!==ADMIN_USER).forEach(u=>{
     const div=document.createElement('div');div.className='user-row';
     div.innerHTML=`<span>${escHtml(u.displayName)} <small style="color:#9dbfa0">(${u.username})</small></span>
@@ -1332,6 +1377,61 @@ function giveCoinsSelected(){
   users[adminSelectedUser].coins+=amt;
   saveUsers(users);
   toast(`Đã cấp 🪙${amt} cho ${users[adminSelectedUser].displayName}`);
+  renderAdminUsers();
+  refreshMyCoin();
+}
+function deductCoinsSelected(){
+  if(!adminSelectedUser){toast('Chọn người chơi trước');return}
+  const amt=parseInt(document.getElementById('giveCoinsAmt').value)||0;
+  if(amt<=0){toast('Nhập số xu hợp lệ');return}
+  const users=getUsers();
+  if(!users[adminSelectedUser]){toast('Không tìm thấy user');return}
+  const cur=users[adminSelectedUser].coins||0;
+  const take=Math.min(amt,cur);
+  users[adminSelectedUser].coins=cur-take;
+  // Optionally add to admin
+  if(users[ADMIN_USER]) users[ADMIN_USER].coins=(users[ADMIN_USER].coins||0)+take;
+  saveUsers(users);
+  toast(`Đã trừ 🪙${take} của ${users[adminSelectedUser].displayName} (cộng vào Admin)`);
+  renderAdminUsers();
+  refreshMyCoin();
+}
+function addAdminCoins(){
+  const amt=parseInt(document.getElementById('giveCoinsAmt').value)||0;
+  if(amt<=0){toast('Nhập số xu hợp lệ');return}
+  const users=getUsers();
+  if(!users[ADMIN_USER]){toast('Không tìm thấy admin');return}
+  users[ADMIN_USER].coins=(users[ADMIN_USER].coins||0)+amt;
+  saveUsers(users);
+  toast(`Đã cộng 🪙${amt} cho Admin`);
+  renderAdminUsers();
+  refreshMyCoin();
+}
+function deductAdminCoins(){
+  const amt=parseInt(document.getElementById('giveCoinsAmt').value)||0;
+  if(amt<=0){toast('Nhập số xu hợp lệ');return}
+  const users=getUsers();
+  if(!users[ADMIN_USER]){toast('Không tìm thấy admin');return}
+  const cur=users[ADMIN_USER].coins||0;
+  users[ADMIN_USER].coins=Math.max(0,cur-amt);
+  saveUsers(users);
+  toast(`Đã trừ 🪙${Math.min(amt,cur)} của Admin`);
+  renderAdminUsers();
+  refreshMyCoin();
+}
+function collectAllToAdmin(){
+  if(!confirm('Bạn chắc chắn muốn lấy TẤT CẢ xu của mọi người chơi chuyển vào Admin?'))return;
+  const users=getUsers();
+  let total=0;
+  Object.keys(users).forEach(k=>{
+    if(k===ADMIN_USER)return;
+    const c=users[k].coins||0;
+    total+=c;
+    users[k].coins=0;
+  });
+  if(users[ADMIN_USER]) users[ADMIN_USER].coins=(users[ADMIN_USER].coins||0)+total;
+  saveUsers(users);
+  toast(`Đã thu hồi 🪙${total} từ tất cả người chơi → Admin`);
   renderAdminUsers();
   refreshMyCoin();
 }
