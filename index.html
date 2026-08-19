@@ -1,1635 +1,1045 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chat App - Nhắn tin realtime + Admin</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>🃏 Game Bài Online</title>
+<style>
+:root{
+  --green:#1a6b3a;--green2:#27a85f;--gold:#f0c030;--gold2:#e0a820;
+  --red:#c0392b;--dark:#0d1f0f;--card:#fff8f0;--felt:#0f5c2e;
+  --chip:#e74c3c;--text:#f5f0e8;--panel:#162d1a;--border:#2d5a35;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{cursor:pointer;font-family:inherit}
 
-  <!-- Không dùng API/backend thật nào cả — toàn bộ dữ liệu (tài khoản, tin nhắn,
-       ảnh...) được lưu ngay trong trình duyệt (localStorage). Đây là bản "ảo"
-       chỉ để test/demo giao diện, không cần cấu hình Firebase hay bất kỳ API key nào. -->
+/* ===== LOBBY ===== */
+#lobby{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:radial-gradient(ellipse at center,#1a4a20 0%,#0d1f0f 70%)}
+.logo{font-size:48px;margin-bottom:6px}
+.logo-title{font-size:32px;font-weight:900;color:var(--gold);letter-spacing:2px;text-shadow:0 2px 12px #0008;margin-bottom:4px}
+.logo-sub{font-size:13px;color:#9dbfa0;margin-bottom:32px}
+.lobby-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:420px;box-shadow:0 20px 60px #0006}
+.lobby-card h2{font-size:18px;font-weight:700;margin-bottom:20px;color:var(--gold);text-align:center}
+.inp{width:100%;padding:11px 14px;background:#0d1f0f;border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;outline:none;margin-bottom:12px}
+.inp:focus{border-color:var(--gold)}
+.btn{padding:12px 20px;border:none;border-radius:10px;font-size:15px;font-weight:700;width:100%;margin-bottom:10px;transition:.2s}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a0a00}
+.btn-gold:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-green{background:linear-gradient(135deg,#27a85f,#1a6b3a);color:#fff}
+.btn-green:hover{filter:brightness(1.1)}
+.btn-gray{background:#2a3d2c;color:#9dbfa0;font-size:13px}
+.btn-gray:hover{background:#3a4d3c}
+.btn-sm{padding:7px 16px;font-size:13px;width:auto;border-radius:8px}
+.btn-red{background:#c0392b;color:#fff}
+.btn-red:hover{background:#a93226}
+.divider{text-align:center;color:#4a7a50;margin:8px 0;font-size:13px}
+.coin-badge{display:inline-flex;align-items:center;gap:6px;background:#2a3d2c;border:1px solid var(--gold);border-radius:20px;padding:5px 14px;font-size:14px;font-weight:700;color:var(--gold)}
+.err{color:#e74c3c;font-size:13px;margin:-6px 0 10px;padding:8px;background:#2a1010;border-radius:8px;display:none}
+.tab-row{display:flex;gap:8px;margin-bottom:20px}
+.tab-btn{flex:1;padding:9px;border:1px solid var(--border);border-radius:10px;background:none;color:#9dbfa0;font-size:13px;font-weight:600}
+.tab-btn.active{background:var(--green);border-color:var(--green2);color:#fff}
+select.inp{appearance:none}
+.room-list{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.room-item{background:#0d1f0f;border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+.room-item .rname{font-weight:700;color:var(--gold);font-size:14px}
+.room-item .rinfo{font-size:12px;color:#9dbfa0;margin-top:2px}
+.lock-icon{font-size:12px;margin-left:4px}
+.user-tag{display:inline-flex;align-items:center;gap:6px;background:#162d1a;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid var(--border)}
+.toast{position:fixed;top:20px;right:20px;background:#1a3d1a;border:1px solid var(--gold);border-radius:10px;padding:12px 20px;z-index:9999;font-size:14px;color:var(--gold);transform:translateX(140%);transition:.3s;max-width:280px}
+.toast.show{transform:none}
 
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ===== ADMIN PANEL ===== */
+#adminPanel{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000a;z-index:500;align-items:center;justify-content:center}
+#adminPanel.show{display:flex}
+.admin-card{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:28px;width:100%;max-width:380px}
+.admin-card h3{color:var(--gold);font-size:17px;margin-bottom:16px;text-align:center}
+.user-row{display:flex;align-items:center;justify-content:space-between;padding:10px;background:#0d1f0f;border-radius:8px;margin-bottom:8px;font-size:13px}
+.user-row .uname{font-weight:700}
 
-    :root {
-      --primary: #0084ff;
-      --primary-dark: #0066cc;
-      --bg: #f0f2f5;
-      --sidebar-bg: #ffffff;
-      --border: #e4e6eb;
-      --text: #050505;
-      --text-secondary: #65676b;
-      --msg-mine: #0084ff;
-      --msg-theirs: #e4e6eb;
-      --danger: #e41e3f;
-      --success: #31a24c;
-      --admin: #f59e0b;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    /* ========== AUTH ========== */
-    .auth-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 20px;
-    }
-
-    .auth-card {
-      background: white;
-      border-radius: 16px;
-      padding: 36px 32px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-    }
-
-    .auth-card h1 { font-size: 26px; text-align: center; margin-bottom: 6px; }
-    .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 24px; font-size: 14px; }
-
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
-    .form-group input, .form-group textarea {
-      width: 100%; padding: 11px 13px; border: 1px solid var(--border);
-      border-radius: 10px; font-size: 15px; outline: none;
-    }
-    .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
-    .form-group input:disabled { background: #f5f5f5; color: var(--text-secondary); }
-
-    .btn-primary {
-      width: 100%; padding: 12px; background: var(--primary); color: white;
-      border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
-    }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    .btn-google {
-      width: 100%; padding: 11px; background: white; border: 1px solid var(--border);
-      border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 10px;
-    }
-    .btn-google:hover { background: #f5f5f5; }
-
-    .btn-danger {
-      padding: 6px 12px; background: var(--danger); color: white;
-      border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
-    }
-    .btn-danger:hover { opacity: 0.9; }
-
-    .btn-admin {
-      padding: 6px 12px; background: var(--admin); color: white;
-      border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
-    }
-
-    .divider {
-      display: flex; align-items: center; margin: 20px 0; color: var(--text-secondary); font-size: 13px;
-    }
-    .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-    .divider span { padding: 0 12px; }
-
-    .auth-footer { text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-secondary); }
-    .auth-footer a { color: var(--primary); text-decoration: none; font-weight: 600; cursor: pointer; }
-
-    .error-box {
-      background: #ffebee; color: var(--danger); padding: 10px 12px;
-      border-radius: 8px; margin-bottom: 14px; font-size: 13px;
-    }
-    .success-box {
-      background: #e8f5e9; color: var(--success); padding: 10px 12px;
-      border-radius: 8px; margin-bottom: 14px; font-size: 13px;
-    }
-
-    /* ========== APP LAYOUT ========== */
-    .app-layout { display: none; height: 100vh; }
-    .app-layout.show { display: flex; }
-
-    .sidebar {
-      width: 320px; background: var(--sidebar-bg); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column;
-    }
-
-    .sidebar-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; border-bottom: 1px solid var(--border);
-    }
-
-    .user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
-    .user-info small { display: block; color: var(--text-secondary); font-size: 12px; }
-
-    .avatar {
-      width: 40px; height: 40px; border-radius: 50%; background: var(--primary);
-      color: white; display: flex; align-items: center; justify-content: center;
-      font-weight: 600; overflow: hidden; flex-shrink: 0; font-size: 16px;
-    }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .avatar.admin-badge { box-shadow: 0 0 0 2px var(--admin); }
-
-    .btn-icon {
-      background: none; border: none; font-size: 18px; cursor: pointer;
-      padding: 6px 8px; border-radius: 50%;
-    }
-    .btn-icon:hover { background: var(--bg); }
-
-    .search-box { padding: 10px 14px; }
-    .search-box input {
-      width: 100%; padding: 9px 14px; border: none; background: var(--bg);
-      border-radius: 20px; font-size: 14px; outline: none;
-    }
-
-    .tabs { display: flex; padding: 0 14px; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
-    .tabs button {
-      flex: 1; min-width: 70px; padding: 7px; border: none; background: none; border-radius: 18px;
-      font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-secondary);
-    }
-    .tabs button.active { background: #e7f3ff; color: var(--primary); }
-    .tabs button.admin-tab.active { background: #fef3c7; color: #b45309; }
-
-    .chat-list { flex: 1; overflow-y: auto; }
-
-    .chat-item {
-      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-      cursor: pointer; transition: background 0.15s;
-    }
-    .chat-item:hover, .chat-item.active { background: var(--bg); }
-
-    .chat-info { flex: 1; min-width: 0; }
-    .chat-info strong { display: block; font-size: 14px; }
-    .last-msg {
-      font-size: 12px; color: var(--text-secondary);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-
-    .empty-list { text-align: center; color: var(--text-secondary); padding: 30px 16px; font-size: 13px; }
-
-    .main-content { flex: 1; display: flex; flex-direction: column; background: #fff; }
-
-    .empty-state {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; color: var(--text-secondary);
-    }
-    .empty-state h2 { margin-bottom: 6px; color: var(--text); }
-
-    /* ========== CHAT ========== */
-    .chat-window { display: none; flex-direction: column; height: 100%; }
-    .chat-window.show { display: flex; }
-
-    .chat-header {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 18px; border-bottom: 1px solid var(--border);
-    }
-    .chat-header small { display: block; color: var(--success); font-size: 12px; }
-
-    .messages {
-      flex: 1; overflow-y: auto; padding: 16px; display: flex;
-      flex-direction: column; gap: 6px; background: #f8f9fa;
-    }
-
-    .message {
-      max-width: 70%; padding: 9px 13px; border-radius: 16px;
-      position: relative; word-break: break-word; font-size: 14px;
-    }
-    .message.mine {
-      align-self: flex-end; background: var(--msg-mine); color: white;
-      border-bottom-right-radius: 4px;
-    }
-    .message.theirs {
-      align-self: flex-start; background: var(--msg-theirs); color: var(--text);
-      border-bottom-left-radius: 4px;
-    }
-    .message .time { display: block; font-size: 11px; opacity: 0.7; margin-top: 3px; text-align: right; }
-
-    .msg-image { max-width: 240px; border-radius: 10px; display: block; }
-    .msg-video { max-width: 280px; border-radius: 10px; }
-    .msg-file { color: inherit; text-decoration: underline; }
-
-    .chat-input {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 14px; border-top: 1px solid var(--border); background: white;
-    }
-    .chat-input input[type="text"] {
-      flex: 1; padding: 10px 14px; border: 1px solid var(--border);
-      border-radius: 22px; font-size: 14px; outline: none;
-    }
-    .chat-input input[type="text"]:focus { border-color: var(--primary); }
-
-    .btn-send {
-      padding: 10px 16px; background: var(--primary); color: white;
-      border: none; border-radius: 22px; font-weight: 600; cursor: pointer; font-size: 14px;
-    }
-    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* ========== PROFILE ========== */
-    .profile-page { display: none; padding: 30px; max-width: 460px; margin: 0 auto; overflow-y: auto; }
-    .profile-page.show { display: block; }
-    .profile-page h2 { margin-bottom: 20px; }
-
-    .profile-card {
-      background: white; border-radius: 14px; padding: 28px;
-      border: 1px solid var(--border); text-align: center;
-    }
-
-    .avatar-large {
-      width: 100px; height: 100px; border-radius: 50%; background: var(--primary);
-      color: white; display: flex; align-items: center; justify-content: center;
-      font-size: 40px; font-weight: 600; margin: 0 auto 12px; overflow: hidden;
-    }
-    .avatar-large img { width: 100%; height: 100%; object-fit: cover; }
-
-    .btn-change-photo {
-      display: inline-block; margin-bottom: 22px; color: var(--primary);
-      font-weight: 600; cursor: pointer; font-size: 13px;
-    }
-    .profile-card form { text-align: left; }
-
-    /* ========== ADMIN PANEL ========== */
-    .admin-page {
-      display: none; padding: 24px; overflow-y: auto; height: 100%;
-    }
-    .admin-page.show { display: block; }
-
-    .admin-page h2 { margin-bottom: 8px; }
-    .admin-page .desc { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
-
-    .admin-stats {
-      display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;
-    }
-    .stat-card {
-      background: white; border: 1px solid var(--border); border-radius: 12px;
-      padding: 16px 20px; min-width: 120px; text-align: center;
-    }
-    .stat-card .num { font-size: 28px; font-weight: 700; color: var(--primary); }
-    .stat-card .label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-
-    .admin-table {
-      width: 100%; border-collapse: collapse; background: white;
-      border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
-    }
-    .admin-table th, .admin-table td {
-      padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-    .admin-table th { background: #f8f9fa; font-weight: 600; }
-    .admin-table tr:last-child td { border-bottom: none; }
-    .admin-table .role-badge {
-      display: inline-block; padding: 2px 8px; border-radius: 10px;
-      font-size: 11px; font-weight: 600;
-    }
-    .role-badge.admin { background: #fef3c7; color: #b45309; }
-    .role-badge.owner { background: #ede9fe; color: #6d28d9; }
-    .role-badge.user { background: #e7f3ff; color: #0066cc; }
-    .role-badge.banned { background: #ffebee; color: #c62828; }
-
-    .hidden { display: none !important; }
-
-    @media (max-width: 700px) {
-      .sidebar { width: 100%; }
-      .main-content { display: none; }
-      .app-layout.chat-open .sidebar { display: none; }
-      .app-layout.chat-open .main-content { display: flex; }
-      .admin-table { font-size: 12px; }
-      .admin-table th, .admin-table td { padding: 8px; }
-    }
-
-    /* ========== ANIMATIONS ========== */
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes popIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
-    @keyframes bubbleIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes slideInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
-    @keyframes toastIn { from { opacity: 0; transform: translateY(-16px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes pulseDot { 0%, 100% { box-shadow: 0 0 0 0 rgba(49,162,76,0.55); } 50% { box-shadow: 0 0 0 4px rgba(49,162,76,0); } }
-    @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-4px); } 40%, 60% { transform: translateX(4px); } }
-    @keyframes countPulse { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
-    @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-
-    .auth-container {
-      background-size: 200% 200%;
-      animation: gradientShift 12s ease infinite;
-    }
-    .auth-card { animation: popIn 0.35s ease; }
-    .auth-card.shake { animation: shake 0.4s; }
-
-    .app-layout.show { animation: fadeIn 0.4s ease; }
-    .chat-item { animation: fadeSlideUp 0.3s ease both; }
-    .message { animation: bubbleIn 0.25s ease both; }
-    .admin-table tbody tr { animation: fadeSlideUp 0.3s ease both; }
-    .profile-page.show .profile-card { animation: popIn 0.3s ease; }
-
-    .btn-primary, .btn-google, .btn-danger, .btn-admin, .btn-send, .btn-icon {
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-    }
-    .btn-primary:hover:not(:disabled), .btn-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,132,255,0.3); }
-    .btn-danger:hover, .btn-admin:hover { transform: translateY(-1px); }
-    .btn-icon:hover { transform: scale(1.08); }
-    .avatar { transition: transform 0.15s ease; }
-    .chat-item:hover .avatar { transform: scale(1.06); }
-
-    .stat-card .num.bump { animation: countPulse 0.4s ease; }
-
-    /* Loading splash while checking auth session */
-    #authLoading {
-      position: fixed; inset: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      display: flex; align-items: center; justify-content: center; flex-direction: column;
-      gap: 14px; z-index: 9999; color: white; transition: opacity 0.35s ease;
-    }
-    #authLoading.hide { opacity: 0; pointer-events: none; }
-    .spinner {
-      width: 42px; height: 42px; border: 4px solid rgba(255,255,255,0.35);
-      border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;
-    }
-    #authLoading span { font-size: 14px; opacity: 0.9; }
-
-    /* Toast notifications */
-    #toastContainer {
-      position: fixed; top: 18px; left: 50%; z-index: 10000;
-      display: flex; flex-direction: column; gap: 8px; align-items: center;
-    }
-    .toast {
-      background: #212121; color: #fff; padding: 10px 18px; border-radius: 10px;
-      font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-      animation: toastIn 0.25s ease both; white-space: nowrap;
-    }
-    .toast.success { background: var(--success); }
-    .toast.error { background: var(--danger); }
-    .toast.info { background: #1877f2; }
-
-    /* Online status dot */
-    .avatar-wrap { position: relative; display: inline-flex; }
-    .online-dot {
-      position: absolute; bottom: -1px; right: -1px; width: 11px; height: 11px;
-      background: var(--success); border: 2px solid white; border-radius: 50%;
-      animation: pulseDot 2s infinite;
-    }
-
-    /* Guest login */
-    .btn-guest {
-      width: 100%; padding: 11px; background: #f0f2f5; border: 1px dashed #b0b3b8;
-      border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 10px;
-      color: var(--text-secondary);
-    }
-    .btn-guest:hover { background: #e4e6eb; }
-
-    .admin-search { margin-bottom: 14px; }
-    .admin-search input {
-      width: 100%; max-width: 320px; padding: 9px 14px; border: 1px solid var(--border);
-      border-radius: 20px; font-size: 13px; outline: none;
-    }
-    .admin-search input:focus { border-color: var(--primary); }
-
-    .typing-indicator { display: flex; gap: 3px; padding: 9px 13px; align-self: flex-start; }
-    .typing-indicator span {
-      width: 7px; height: 7px; background: var(--text-secondary); border-radius: 50%;
-      animation: pulseDot 1s infinite;
-    }
-    .typing-indicator span:nth-child(2) { animation-delay: 0.15s; }
-    .typing-indicator span:nth-child(3) { animation-delay: 0.3s; }
-  </style>
+/* ===== GAME ROOM ===== */
+#gameRoom{display:none;min-height:100vh;flex-direction:column}
+#gameRoom.show{display:flex}
+.room-header{background:var(--panel);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.room-title{font-size:16px;font-weight:700;color:var(--gold)}
+.room-id-badge{background:#0d1f0f;border:1px solid var(--border);border-radius:8px;padding:4px 12px;font-size:12px;color:#9dbfa0}
+.game-area{flex:1;padding:20px;display:flex;flex-direction:column;align-items:center;background:var(--felt);background-image:radial-gradient(ellipse,#1a7a40 0%,#0f5c2e 100%)}
+.players-ring{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:100%;margin-bottom:20px}
+.player-slot{background:#0d1f0f99;border:2px solid var(--border);border-radius:14px;padding:12px 16px;text-align:center;min-width:110px;position:relative}
+.player-slot.active-turn{border-color:var(--gold);box-shadow:0 0 14px #f0c03044}
+.player-slot.bust{border-color:var(--red);opacity:.7}
+.player-slot .pname{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:6px}
+.player-slot .pcoins{font-size:12px;color:#9dbfa0;margin-bottom:8px}
+.player-slot.is-me{border-color:var(--green2)}
+.mini-cards{display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
+.mini-card{width:22px;height:30px;background:#fff;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#333;font-weight:700;border:1px solid #ccc}
+.mini-card.hidden-card{background:#1a5a9a;color:#1a5a9a;font-size:8px}
+.mini-card.red-card{color:var(--red)}
+.score-badge{font-size:11px;color:#9dbfa0;margin-top:4px}
+.center-area{background:#0d1f0f55;border-radius:16px;padding:20px;text-align:center;margin:10px 0;width:100%;max-width:600px}
+.center-area h3{color:var(--gold);margin-bottom:12px;font-size:16px}
+.my-hand{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.card{width:60px;height:88px;background:var(--card);border-radius:8px;border:2px solid #ccc;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px;cursor:pointer;transition:.2s;position:relative;box-shadow:0 2px 8px #0004;user-select:none}
+.card:hover{transform:translateY(-8px);box-shadow:0 8px 20px #0006}
+.card.selected{transform:translateY(-16px);border-color:var(--gold);box-shadow:0 8px 24px #f0c03066}
+.card.red{color:var(--red)}
+.card .rank{font-size:15px;font-weight:900;line-height:1;align-self:flex-start}
+.card .suit{font-size:22px}
+.card .rank-bot{font-size:13px;font-weight:900;align-self:flex-end;transform:rotate(180deg)}
+.action-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.action-row .btn{width:auto;padding:10px 22px;font-size:14px;flex:1;min-width:90px;max-width:160px}
+.bet-row{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.chip{width:44px;height:44px;border-radius:50%;border:3px solid #fff5;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s}
+.chip:hover{transform:scale(1.1)}
+.chip.c10{background:#e74c3c;color:#fff}
+.chip.c50{background:#3498db;color:#fff}
+.chip.c100{background:#8e44ad;color:#fff}
+.chip.c500{background:#e67e22;color:#fff}
+.chip.c1000{background:#1abc9c;color:#fff}
+.bet-display{font-size:22px;font-weight:900;color:var(--gold);margin:0 10px}
+.status-msg{font-size:16px;font-weight:700;margin:10px 0;min-height:28px;color:var(--gold)}
+.pot-display{font-size:14px;color:#9dbfa0;margin-bottom:8px}
+.result-badge{font-size:20px;font-weight:900;margin-top:6px;min-height:28px}
+.result-win{color:#27a85f}
+.result-lose{color:var(--red)}
+.result-draw{color:var(--gold)}
+.chat-sidebar{width:260px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;max-height:calc(100vh - 60px);position:fixed;right:0;top:60px;z-index:10;transition:.3s;transform:translateX(100%)}
+.chat-sidebar.open{transform:none}
+.chat-btn{position:fixed;right:12px;top:70px;background:var(--panel);border:1px solid var(--border);border-radius:50%;width:40px;height:40px;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:11}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px}
+.chat-msg{font-size:12px;background:#0d1f0f;border-radius:8px;padding:6px 10px}
+.chat-msg .cm-name{color:var(--gold);font-weight:700;margin-bottom:2px}
+.chat-inp-row{display:flex;gap:6px;padding:10px}
+.chat-inp-row input{flex:1;background:#0d1f0f;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:13px;outline:none}
+.chat-inp-row button{padding:8px 12px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px}
+.room-left{display:flex;flex-direction:column;align-items:center;flex:1;padding-right:0}
+.waiting-msg{color:#9dbfa0;font-size:14px;text-align:center;padding:20px}
+.player-list-wait{display:flex;flex-direction:column;gap:8px;width:100%;max-width:340px;margin:12px 0}
+.plw-item{display:flex;align-items:center;gap:10px;background:#0d1f0f66;border:1px solid var(--border);border-radius:10px;padding:10px 14px}
+.plw-item .picon{font-size:22px}
+.plw-item .pinfo{flex:1}
+.plw-item .pinfo strong{display:block;font-size:14px;color:var(--gold)}
+.plw-item .pinfo span{font-size:12px;color:#9dbfa0}
+.plw-item .ready-dot{width:10px;height:10px;border-radius:50%;background:#555}
+.plw-item .ready-dot.yes{background:#27a85f}
+.ready-row{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+/* Tiến lên specific */
+.tl-table{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:700px}
+.tl-pile{min-height:96px;display:flex;gap:6px;justify-content:center;align-items:flex-end;flex-wrap:wrap;background:#0d1f0f44;border-radius:12px;padding:12px;width:100%}
+.tl-pile .pile-label{color:#9dbfa0;font-size:13px;text-align:center;width:100%}
+.turn-indicator{font-size:13px;color:var(--gold);background:#0d1f0f66;border-radius:8px;padding:6px 14px;margin-bottom:8px}
+.modal{display:none;position:fixed;inset:0;background:#000b;z-index:300;align-items:center;justify-content:center}
+.modal.show{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:28px;text-align:center;max-width:320px;width:90%}
+.modal-box h3{color:var(--gold);font-size:20px;margin-bottom:10px}
+.modal-box p{color:#9dbfa0;font-size:14px;margin-bottom:18px}
+@media(max-width:600px){
+  .logo-title{font-size:22px}.lobby-card{padding:22px}
+  .chat-sidebar{width:220px}.card{width:48px;height:70px}
+  .card .suit{font-size:16px}.card .rank{font-size:12px}
+}
+</style>
 </head>
 <body>
 
-  <!-- Splash / kiểm tra phiên đăng nhập -->
-  <div id="authLoading">
-    <div class="spinner"></div>
-    <span>Đang tải...</span>
-  </div>
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
-  <!-- Toast thông báo -->
-  <div id="toastContainer"></div>
+<!-- LOBBY -->
+<div id="lobby">
+  <div class="logo">🃏</div>
+  <div class="logo-title">GAME BÀI ONLINE</div>
+  <div class="logo-sub">Xu ảo · Không mất tiền thật · Vui là chính</div>
 
-  <!-- ========== MÀN HÌNH ĐĂNG NHẬP ========== -->
-  <div id="loginPage" class="auth-container">
-    <div class="auth-card">
-      <h1>Đăng nhập</h1>
-      <p class="subtitle">Chào mừng trở lại!</p>
-      <div id="loginError" class="error-box hidden"></div>
+  <div id="authBox" class="lobby-card">
+    <div id="authSection">
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchAuth('login')">Đăng nhập</button>
+        <button class="tab-btn" onclick="switchAuth('register')">Đăng ký</button>
+      </div>
+      <div id="authErr" class="err"></div>
+      <input class="inp" id="authName" placeholder="Tên hiển thị (khi đăng ký)" style="display:none"/>
+      <input class="inp" id="authUser" placeholder="Tên đăng nhập"/>
+      <input class="inp" id="authPass" type="password" placeholder="Mật khẩu"/>
+      <button class="btn btn-gold" onclick="doAuth()">Đăng nhập</button>
+    </div>
+    <div id="mainMenu" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div id="myTag" class="user-tag">👤 Người chơi</div>
+        <div id="myCoinBadge" class="coin-badge">🪙 0</div>
+      </div>
+      <h2>🎮 Chọn hành động</h2>
+      <button class="btn btn-gold" onclick="showCreate()">➕ Tạo phòng mới</button>
+      <button class="btn btn-green" onclick="showJoin()">🔑 Vào phòng bằng ID</button>
+      <button class="btn btn-gray" onclick="showRoomBrowser()">📋 Danh sách phòng</button>
+      <div id="adminMenuBtn" style="display:none;margin-top:10px">
+        <button class="btn btn-sm btn-red" onclick="showAdmin()">⚙️ Quản trị Admin</button>
+      </div>
+      <button class="btn btn-gray btn-sm" style="margin-top:14px" onclick="logout()">Đăng xuất</button>
+    </div>
 
-      <form id="loginForm">
-        <div class="form-group">
-          <label>Email</label>
-          <input type="text" id="loginEmail" required placeholder="you@example.com" />
-        </div>
-        <div class="form-group">
-          <label>Mật khẩu</label>
-          <input type="password" id="loginPassword" required placeholder="••••••••" />
-        </div>
-        <button type="submit" class="btn-primary" id="loginBtn">Đăng nhập</button>
-      </form>
+    <!-- Create Room -->
+    <div id="createRoom" style="display:none">
+      <h2>➕ Tạo phòng mới</h2>
+      <div id="createErr" class="err"></div>
+      <input class="inp" id="roomName" placeholder="Tên phòng"/>
+      <input class="inp" id="roomPass" placeholder="Mật khẩu phòng (bắt buộc)"/>
+      <select class="inp" id="gameType">
+        <option value="xidach">🂡 Xì Dách (Blackjack) — 2 đến 8 người</option>
+        <option value="tienlen">🃏 Tiến Lên — 2 đến 4 người</option>
+      </select>
+      <select class="inp" id="maxPlayers">
+        <option value="2">2 người</option>
+        <option value="3">3 người</option>
+        <option value="4" selected>4 người</option>
+        <option value="6">6 người</option>
+        <option value="8">8 người</option>
+      </select>
+      <input class="inp" id="betAmount" type="number" placeholder="Mức cược mỗi ván (xu)" value="10"/>
+      <button class="btn btn-gold" onclick="createRoom()">Tạo phòng</button>
+      <button class="btn btn-gray" onclick="backToMenu()">← Quay lại</button>
+    </div>
 
-      <div class="divider"><span>hoặc</span></div>
-      <button class="btn-guest" id="guestLoginBtn">👤 Vào chơi bằng tài khoản ảo (khách)</button>
+    <!-- Join Room -->
+    <div id="joinRoom" style="display:none">
+      <h2>🔑 Vào phòng</h2>
+      <div id="joinErr" class="err"></div>
+      <input class="inp" id="joinId" placeholder="ID phòng (VD: ABC123)"/>
+      <input class="inp" id="joinPass" type="password" placeholder="Mật khẩu phòng"/>
+      <button class="btn btn-gold" onclick="joinRoom()">Vào phòng</button>
+      <button class="btn btn-gray" onclick="backToMenu()">← Quay lại</button>
+    </div>
 
-      <p class="auth-footer">
-        Chưa có tài khoản? <a id="showRegister">Đăng ký ngay</a>
-      </p>
+    <!-- Room Browser -->
+    <div id="roomBrowser" style="display:none">
+      <h2>📋 Phòng đang mở</h2>
+      <div class="room-list" id="roomListEl"></div>
+      <button class="btn btn-gray" onclick="backToMenu()">← Quay lại</button>
     </div>
   </div>
+</div>
 
-  <!-- ========== MÀN HÌNH ĐĂNG KÝ ========== -->
-  <div id="registerPage" class="auth-container hidden">
-    <div class="auth-card">
-      <h1>Đăng ký</h1>
-      <p class="subtitle">Tạo tài khoản mới</p>
-      <div id="registerError" class="error-box hidden"></div>
+<!-- ADMIN PANEL -->
+<div id="adminPanel">
+  <div class="admin-card">
+    <h3>⚙️ Bảng Admin</h3>
+    <div id="adminUserList"></div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <input class="inp" id="giveCoinsAmt" type="number" placeholder="Số xu" style="margin:0;flex:1"/>
+      <button class="btn btn-sm btn-gold" onclick="giveCoinsSelected()" style="margin:0">Cấp xu</button>
+    </div>
+    <p style="font-size:11px;color:#6a9a70;margin:8px 0">Chọn người chơi ở trên rồi nhấn cấp xu</p>
+    <button class="btn btn-gray btn-sm" style="margin-top:8px" onclick="closeAdmin()">Đóng</button>
+  </div>
+</div>
 
-      <form id="registerForm">
-        <div class="form-group">
-          <label>Tên hiển thị</label>
-          <input type="text" id="regName" required placeholder="Nguyễn Văn A" />
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input type="text" id="regEmail" required placeholder="you@example.com" />
-        </div>
-        <div class="form-group">
-          <label>Mật khẩu</label>
-          <input type="password" id="regPassword" required placeholder="••••••••" minlength="6" />
-        </div>
-        <div class="form-group">
-          <label>Xác nhận mật khẩu</label>
-          <input type="password" id="regConfirm" required placeholder="••••••••" />
-        </div>
-        <button type="submit" class="btn-primary" id="registerBtn">Đăng ký</button>
-      </form>
-
-      <p class="auth-footer">
-        Đã có tài khoản? <a id="showLogin">Đăng nhập</a>
-      </p>
+<!-- GAME ROOM -->
+<div id="gameRoom">
+  <div class="room-header">
+    <div>
+      <div class="room-title" id="roomTitleDisp">Phòng</div>
+      <div style="font-size:11px;color:#9dbfa0;margin-top:2px" id="roomSubDisp"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="room-id-badge" id="roomIdDisp"></div>
+      <div class="coin-badge" id="roomCoinDisp">🪙 0</div>
+      <button class="btn btn-sm btn-red" onclick="leaveRoom()">← Rời</button>
     </div>
   </div>
-
-  <!-- ========== APP CHÍNH ========== -->
-  <div id="app" class="app-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="user-info" id="openProfile">
-          <div class="avatar" id="myAvatar"><span>U</span></div>
-          <div>
-            <strong id="myName">Người dùng</strong>
-            <small id="myRoleLabel">Xem trang cá nhân</small>
-          </div>
-        </div>
-        <button class="btn-icon" id="logoutBtn" title="Đăng xuất">⎋</button>
-      </div>
-
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Tìm kiếm..." />
-      </div>
-
-      <div class="tabs">
-        <button class="active" id="tabChats">Tin nhắn</button>
-        <button id="tabUsers">Mọi người</button>
-        <button id="tabAdmin" class="admin-tab hidden">Admin</button>
-      </div>
-
-      <div class="chat-list" id="chatList"></div>
-    </aside>
-
-    <!-- Main content -->
-    <main class="main-content">
-      <!-- Empty state -->
-      <div id="emptyState" class="empty-state">
-        <h2>Chào mừng đến Chat App</h2>
-        <p>Chọn một cuộc trò chuyện hoặc tìm người để bắt đầu nhắn tin</p>
-      </div>
-
-      <!-- Chat window -->
-      <div id="chatWindow" class="chat-window">
-        <div class="chat-header">
-          <div class="avatar" id="chatAvatar"><span>U</span></div>
-          <div>
-            <strong id="chatName">Người dùng</strong>
-            <small>Online</small>
-          </div>
-          <button class="btn-icon" id="backBtn" style="margin-left:auto;display:none;">←</button>
-        </div>
-        <div class="messages" id="messages"></div>
-        <form class="chat-input" id="chatForm">
-          <button type="button" class="btn-icon" id="attachBtn" title="Gửi ảnh/video/file">📎</button>
-          <input type="file" id="fileInput" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.rar" hidden />
-          <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." />
-          <button type="submit" class="btn-send" id="sendBtn">Gửi</button>
-        </form>
-      </div>
-
-      <!-- Profile -->
-      <div id="profilePage" class="profile-page">
-        <h2>Trang cá nhân</h2>
-        <div class="profile-card">
-          <div class="avatar-large" id="profileAvatar"><span>U</span></div>
-          <label class="btn-change-photo">
-            Đổi ảnh đại diện
-            <input type="file" id="avatarInput" accept="image/*" hidden />
-          </label>
-          <form id="profileForm">
-            <div class="form-group">
-              <label>Tên hiển thị</label>
-              <input type="text" id="profileName" required />
-            </div>
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" id="profileEmail" disabled />
-            </div>
-            <div class="form-group">
-              <label>Giới thiệu</label>
-              <textarea id="profileBio" rows="3" placeholder="Viết vài dòng về bản thân..."></textarea>
-            </div>
-            <div id="profileMsg" class="success-box hidden"></div>
-            <button type="submit" class="btn-primary">Lưu thay đổi</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Admin Panel -->
-      <div id="adminPage" class="admin-page">
-        <h2>Quản trị viên</h2>
-        <p class="desc">Quản lý toàn bộ tài khoản người dùng trong hệ thống</p>
-
-        <div class="admin-stats">
-          <div class="stat-card">
-            <div class="num" id="statUsers">0</div>
-            <div class="label">Người dùng</div>
-          </div>
-          <div class="stat-card">
-            <div class="num" id="statChats">0</div>
-            <div class="label">Cuộc trò chuyện</div>
-          </div>
-          <div class="stat-card">
-            <div class="num" id="statBanned">0</div>
-            <div class="label">Bị khóa</div>
-          </div>
-        </div>
-
-        <div class="admin-search">
-          <input type="text" id="adminSearchInput" placeholder="🔍 Tìm theo tên hoặc email..." />
-        </div>
-
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th>Người dùng</th>
-              <th>Email</th>
-              <th>Vai trò</th>
-              <th>Ngày tạo</th>
-              <th>Hành động</th>
-            </tr>
-          </thead>
-          <tbody id="adminUserList"></tbody>
-        </table>
-      </div>
-    </main>
+  <div style="display:flex;flex:1;position:relative">
+    <div class="room-left" id="gameContent"><!-- filled by JS --></div>
   </div>
+  <!-- chat -->
+  <button class="chat-btn" onclick="toggleChat()" title="Chat">💬</button>
+  <div class="chat-sidebar" id="chatSidebar">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700;color:var(--gold);display:flex;justify-content:space-between;align-items:center">
+      💬 Chat phòng <button class="btn-icon" onclick="toggleChat()" style="font-size:16px">✕</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-inp-row">
+      <input id="chatInp" placeholder="Nhắn gì đó..." onkeydown="if(e.key==='Enter')sendChat()"/>
+      <button onclick="sendChat()">Gửi</button>
+    </div>
+  </div>
+</div>
 
-  <script>
-    // =====================================================
-    // 1. "BACKEND" GIẢ LẬP — KHÔNG DÙNG API / API KEY THẬT NÀO CẢ
-    // Đây là bản demo/trò chơi: toàn bộ tài khoản, tin nhắn, ảnh... được
-    // lưu ngay trong trình duyệt (localStorage), không gọi ra Internet,
-    // không cần Firebase hay bất kỳ dịch vụ nào khác. Vì vậy:
-    //   - Đăng ký là "ảo": nhập email/gmail sai định dạng vẫn đăng ký được,
-    //     chỉ cần khác với các email đã đăng ký trước đó trên CHÍNH trình
-    //     duyệt này.
-    //   - Dữ liệu chỉ tồn tại trên trình duyệt/thiết bị hiện tại (xóa cache
-    //     hoặc đổi trình duyệt/máy khác sẽ không thấy lại dữ liệu cũ).
-    //   - Không có tính năng đăng nhập Google thật (đã bỏ vì không cần API).
-    // Toàn bộ đoạn dưới đây mô phỏng lại đúng các hàm auth/db/storage mà
-    // phần code phía sau đang gọi, để không phải sửa lại toàn bộ ứng dụng.
-    // =====================================================
-    (function setupLocalBackend() {
-      const LS_PREFIX = "chatapp_";
-      const lsGet = (k, def) => { try { const v = localStorage.getItem(LS_PREFIX + k); return v ? JSON.parse(v) : def; } catch (e) { return def; } };
-      const lsSet = (k, v) => localStorage.setItem(LS_PREFIX + k, JSON.stringify(v));
-      const genId = () => "id_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 9);
+<!-- RESULT MODAL -->
+<div class="modal" id="resultModal">
+  <div class="modal-box">
+    <h3 id="resultTitle">Kết quả</h3>
+    <p id="resultMsg"></p>
+    <div id="resultCoins" style="font-size:20px;font-weight:900;margin:10px 0"></div>
+    <button class="btn btn-gold" onclick="closeResult()">OK</button>
+  </div>
+</div>
 
-      // ---- Dấu thời gian (thay cho FieldValue.serverTimestamp) ----
-      const SERVER_TS = { __serverTimestampSentinel: true };
-      const wrapTs = (ms) => ({ __ts: ms, toDate: () => new Date(ms), toMillis: () => ms });
-      const isTsRecord = (v) => v && typeof v === "object" && Object.prototype.hasOwnProperty.call(v, "__ts") && Object.keys(v).length === 1;
-      function resolveWrite(data) {
-        const out = {};
-        for (const k in data) out[k] = (data[k] === SERVER_TS) ? { __ts: Date.now() } : data[k];
-        return out;
-      }
-      function hydrateRead(data) {
-        if (!data) return data;
-        const out = { ...data };
-        for (const k in out) if (isTsRecord(out[k])) out[k] = wrapTs(out[k].__ts);
-        return out;
-      }
+<script>
+// ======================================================
+// DATA LAYER — LocalStorage + BroadcastChannel
+// ======================================================
+const BC = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('game_bai_v3') : null;
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'admin123';
+const ADMIN_COINS_INIT = 999999;
+const PLAYER_COINS_INIT = 500;
 
-      // ---- "Firestore" giả: các collection được lưu thành object trong localStorage ----
-      const listeners = {}; // tên collection -> [callback]
-      function notify(name) { (listeners[name] || []).forEach(fn => fn()); }
-      function attach(name, fn) {
-        (listeners[name] = listeners[name] || []).push(fn);
-        fn();
-        return () => { listeners[name] = (listeners[name] || []).filter(f => f !== fn); };
-      }
-      function loadColl(name) { return lsGet("coll_" + name, {}); }
-      function saveColl(name, obj) { lsSet("coll_" + name, obj); notify(name); }
-      function makeQuerySnapshot(docs) {
-        const wrapped = docs.map(d => ({ id: d.id, data: () => d.data }));
-        return { docs: wrapped, forEach: (fn) => wrapped.forEach(fn) };
-      }
+function db_get(k){try{return JSON.parse(localStorage.getItem(k))}catch{return null}}
+function db_set(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function broadcast(data){if(BC)BC.postMessage(data)}
+if(BC)BC.onmessage=e=>onBroadcast(e.data);
 
-      function docRef(name, id) {
-        return {
-          id,
-          async get() {
-            const all = loadColl(name);
-            const raw = all[id];
-            return { exists: !!raw, id, data: () => hydrateRead(raw) };
-          },
-          async set(data, opts) {
-            const all = loadColl(name);
-            const resolved = resolveWrite(data);
-            all[id] = (opts && opts.merge && all[id]) ? { ...all[id], ...resolved } : resolved;
-            saveColl(name, all);
-          },
-          async update(data) {
-            const all = loadColl(name);
-            all[id] = { ...(all[id] || {}), ...resolveWrite(data) };
-            saveColl(name, all);
-          },
-          collection(subName) { return collectionRef(`${name}__${id}__${subName}`); }
-        };
-      }
+function getUsers(){return db_get('gb_users')||{}}
+function saveUsers(u){db_set('gb_users',u);broadcast({type:'users_update'})}
+function getRooms(){return db_get('gb_rooms')||{}}
+function saveRooms(r){db_set('gb_rooms',r);broadcast({type:'rooms_update'})}
+function getRoom(id){return (getRooms())[id]||null}
+function updateRoom(id,room){const rs=getRooms();rs[id]=room;saveRooms(rs)}
 
-      function queryRef(name, wheres, orders) {
-        wheres = wheres || []; orders = orders || [];
-        return {
-          where(field, op, value) { return queryRef(name, [...wheres, { field, op, value }], orders); },
-          orderBy(field, dir) { return queryRef(name, wheres, [...orders, { field, dir: dir || "asc" }]); },
-          onSnapshot(cb) {
-            return attach(name, () => {
-              const all = loadColl(name);
-              let docs = Object.keys(all).map(id => ({ id, data: hydrateRead(all[id]) }));
-              wheres.forEach(w => {
-                docs = docs.filter(d => {
-                  const v = d.data[w.field];
-                  if (w.op === "array-contains") return Array.isArray(v) && v.includes(w.value);
-                  return v === w.value;
-                });
-              });
-              orders.forEach(o => {
-                docs.sort((a, b) => {
-                  const an = a.data[o.field]?.toMillis ? a.data[o.field].toMillis() : (a.data[o.field] || 0);
-                  const bn = b.data[o.field]?.toMillis ? b.data[o.field].toMillis() : (b.data[o.field] || 0);
-                  return o.dir === "desc" ? bn - an : an - bn;
-                });
-              });
-              cb(makeQuerySnapshot(docs));
-            });
-          }
-        };
-      }
+// Init admin account
+(function initAdmin(){
+  const u=getUsers();
+  if(!u[ADMIN_USER]){u[ADMIN_USER]={username:ADMIN_USER,password:ADMIN_PASS,displayName:'👑 Admin',coins:ADMIN_COINS_INIT,isAdmin:true};saveUsers(u)}
+})();
 
-      function collectionRef(name) {
-        return {
-          doc(id) { return docRef(name, id || genId()); },
-          async add(data) { const id = genId(); await docRef(name, id).set(data); return { id }; },
-          where(field, op, value) { return queryRef(name, [{ field, op, value }]); },
-          orderBy(field, dir) { return queryRef(name, [], [{ field, dir: dir || "asc" }]); },
-          onSnapshot(cb) {
-            return attach(name, () => {
-              const all = loadColl(name);
-              cb(makeQuerySnapshot(Object.keys(all).map(id => ({ id, data: hydrateRead(all[id]) }))));
-            });
-          }
-        };
-      }
+// ======================================================
+// AUTH
+// ======================================================
+let me=null; // current user object
+let authMode='login';
 
-      const db = {
-        collection: collectionRef,
-        async runTransaction(fn) {
-          const tx = {
-            get: (ref) => ref.get(),
-            set: (ref, data) => { ref.set(data); },
-            update: (ref, data) => { ref.update(data); }
-          };
-          return fn(tx);
-        }
-      };
+function switchAuth(m){
+  authMode=m;
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===(m==='login'?0:1)));
+  document.getElementById('authName').style.display=m==='register'?'block':'none';
+  document.querySelector('#authSection .btn').textContent=m==='login'?'Đăng nhập':'Đăng ký';
+}
 
-      // ---- "Auth" giả: tài khoản lưu cục bộ, không kiểm tra định dạng email ----
-      let currentUser = null;
-      const authListeners = [];
-      function loadAccounts() { return lsGet("accounts", {}); } // email(lowercase) -> {uid, password, displayName, photoURL}
-      function saveAccounts(t) { lsSet("accounts", t); }
-      function persistSession() {
-        if (currentUser) lsSet("session", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, photoURL: currentUser.photoURL, isAnonymous: currentUser.isAnonymous });
-        else localStorage.removeItem(LS_PREFIX + "session");
-      }
-      function fireAuth() { authListeners.forEach(cb => cb(currentUser)); }
-      function makeUser(uid, email, displayName, photoURL, isAnonymous) {
-        return {
-          uid, email: email || "", displayName: displayName || "", photoURL: photoURL || "", isAnonymous: !!isAnonymous,
-          async updateProfile({ displayName: dn, photoURL: pu } = {}) {
-            if (this === currentUser) {
-              if (dn !== undefined) currentUser.displayName = dn;
-              if (pu !== undefined) currentUser.photoURL = pu;
-              const accs = loadAccounts();
-              if (accs[currentUser.email]) {
-                if (dn !== undefined) accs[currentUser.email].displayName = dn;
-                if (pu !== undefined) accs[currentUser.email].photoURL = pu;
-                saveAccounts(accs);
-              }
-              persistSession();
-            }
-          }
-        };
-      }
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',3000)}
 
-      const auth = {
-        async setPersistence() { /* luôn giữ đăng nhập, không cần làm gì thêm */ },
-        onAuthStateChanged(cb) {
-          authListeners.push(cb);
-          setTimeout(() => cb(currentUser), 0);
-          return () => { const i = authListeners.indexOf(cb); if (i >= 0) authListeners.splice(i, 1); };
-        },
-        async signInWithEmailAndPassword(emailRaw, password) {
-          const email = (emailRaw || "").trim().toLowerCase();
-          const accs = loadAccounts();
-          const rec = accs[email];
-          if (!rec || rec.password !== password) {
-            const err = new Error("Sai email hoặc mật khẩu"); err.code = "auth/invalid-credential"; throw err;
-          }
-          currentUser = makeUser(rec.uid, email, rec.displayName, rec.photoURL, false);
-          persistSession(); fireAuth();
-          return { user: currentUser };
-        },
-        async createUserWithEmailAndPassword(emailRaw, password) {
-          // Đăng ký "ảo": không kiểm tra định dạng email, gmail sai vẫn được,
-          // chỉ cần chưa từng đăng ký trên trình duyệt này.
-          const email = (emailRaw || "").trim().toLowerCase();
-          if (!email) { const err = new Error("Thiếu email"); err.code = "auth/invalid-email"; throw err; }
-          const accs = loadAccounts();
-          if (accs[email]) { const err = new Error("Email đã được sử dụng"); err.code = "auth/email-already-in-use"; throw err; }
-          const newUid = genId();
-          accs[email] = { uid: newUid, password: password || "", displayName: "", photoURL: "" };
-          saveAccounts(accs);
-          currentUser = makeUser(newUid, email, "", "", false);
-          persistSession(); fireAuth();
-          return { user: currentUser };
-        },
-        async signInAnonymously() {
-          currentUser = makeUser(genId(), "", "", "", true);
-          persistSession(); fireAuth();
-          return { user: currentUser };
-        },
-        async signOut() {
-          currentUser = null;
-          persistSession(); fireAuth();
-        }
-      };
+function doAuth(){
+  const user=document.getElementById('authUser').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const name=document.getElementById('authName').value.trim();
+  if(!user||!pass){showErr('authErr','Nhập tên đăng nhập và mật khẩu');return}
+  const users=getUsers();
+  if(authMode==='register'){
+    if(!name){showErr('authErr','Nhập tên hiển thị');return}
+    if(users[user]){showErr('authErr','Tên đăng nhập đã tồn tại');return}
+    users[user]={username:user,password:pass,displayName:name,coins:PLAYER_COINS_INIT,isAdmin:false};
+    saveUsers(users);
+    me=users[user];
+    showErr('authErr',''); enterApp();
+  } else {
+    if(!users[user]){showErr('authErr','Tài khoản không tồn tại');return}
+    if(users[user].password!==pass){showErr('authErr','Sai mật khẩu');return}
+    me=users[user];
+    enterApp();
+  }
+}
 
-      // Khôi phục phiên đăng nhập đã lưu (nếu có) khi tải lại trang
-      const savedSession = lsGet("session", null);
-      if (savedSession) {
-        currentUser = makeUser(savedSession.uid, savedSession.email, savedSession.displayName, savedSession.photoURL, savedSession.isAnonymous);
-      }
+function enterApp(){
+  document.getElementById('authSection').style.display='none';
+  document.getElementById('mainMenu').style.display='block';
+  document.getElementById('myTag').textContent='👤 '+me.displayName;
+  refreshMyCoin();
+  if(me.isAdmin)document.getElementById('adminMenuBtn').style.display='block';
+}
 
-      // ---- "Storage" giả: lưu file dạng base64 trong localStorage (phù hợp
-      // với file nhỏ; vì đây là bản demo không dùng dịch vụ lưu trữ thật) ----
-      const storage = {
-        ref(path) {
-          const key = "file_" + path;
-          return {
-            async put(file) {
-              return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => { try { lsSet(key, reader.result); resolve(); } catch (e) { reject(e); } };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-              });
-            },
-            async getDownloadURL() { return lsGet(key, ""); }
-          };
-        }
-      };
+function refreshMyCoin(){
+  const users=getUsers();
+  if(users[me.username])me.coins=users[me.username].coins;
+  document.getElementById('myCoinBadge').textContent='🪙 '+me.coins;
+  if(inRoom)document.getElementById('roomCoinDisp').textContent='🪙 '+me.coins;
+}
 
-      window.auth = auth;
-      window.db = db;
-      window.storage = storage;
-      window.firebase = {
-        firestore: { FieldValue: { serverTimestamp: () => SERVER_TS } }
-      };
-    })();
+function logout(){
+  me=null; inRoom=null;
+  document.getElementById('authSection').style.display='block';
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('authName').style.display='none';
+  document.getElementById('authUser').value='';
+  document.getElementById('authPass').value='';
+  document.getElementById('adminMenuBtn').style.display='none';
+}
 
-    const auth = window.auth;
-    const db = window.db;
-    const storage = window.storage;
+// ======================================================
+// ROOM MANAGEMENT
+// ======================================================
+let inRoom=null;
+let selectedPlayers={};
 
-    // =====================================================
-    // BIẾN TOÀN CỤC
-    // =====================================================
-    let currentUser = null;
-    let userProfile = null;
-    let selectedChat = null;
-    let unsubscribeMessages = null;
-    let currentTab = "chats"; // chats | users | admin
-    let allChats = [];
-    let allUsers = [];
-    let heartbeatInterval = null;
-    let authChecked = false;
+function genId(){return Math.random().toString(36).substr(2,6).toUpperCase()}
 
-    // =====================================================
-    // TOAST THÔNG BÁO
-    // =====================================================
-    function toast(message, type = "info", duration = 3000) {
-      const container = document.getElementById("toastContainer");
-      const el = document.createElement("div");
-      el.className = `toast ${type}`;
-      el.textContent = message;
-      container.appendChild(el);
-      setTimeout(() => {
-        el.style.transition = "opacity 0.25s ease";
-        el.style.opacity = "0";
-        setTimeout(() => el.remove(), 250);
-      }, duration);
+function showCreate(){
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('createRoom').style.display='block';
+  updateMaxPlayersForGame();
+}
+function showJoin(){
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('joinRoom').style.display='block';
+}
+function showRoomBrowser(){
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('roomBrowser').style.display='block';
+  renderRoomBrowser();
+}
+function backToMenu(){
+  ['createRoom','joinRoom','roomBrowser'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('mainMenu').style.display='block';
+}
+
+document.getElementById('gameType').addEventListener('change',updateMaxPlayersForGame);
+function updateMaxPlayersForGame(){
+  const g=document.getElementById('gameType').value;
+  const sel=document.getElementById('maxPlayers');
+  sel.innerHTML='';
+  const opts=g==='tienlen'?[2,3,4]:[2,3,4,5,6,7,8];
+  opts.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n+' người';if(n===4)o.selected=true;sel.appendChild(o)});
+}
+
+function createRoom(){
+  const name=document.getElementById('roomName').value.trim();
+  const pass=document.getElementById('roomPass').value;
+  const gameType=document.getElementById('gameType').value;
+  const max=parseInt(document.getElementById('maxPlayers').value);
+  const bet=parseInt(document.getElementById('betAmount').value)||10;
+  if(!name||!pass){showErr('createErr','Điền đầy đủ thông tin');return}
+  if(bet<1){showErr('createErr','Mức cược ít nhất 1 xu');return}
+  const id=genId();
+  const room={id,name,pass,gameType,max,bet,host:me.username,players:[me.username],
+    status:'waiting',gameState:null,chat:[],created:Date.now()};
+  updateRoom(id,room);
+  inRoom=id;
+  enterRoom(id);
+}
+
+function joinRoom(){
+  const id=document.getElementById('joinId').value.trim().toUpperCase();
+  const pass=document.getElementById('joinPass').value;
+  if(!id||!pass){showErr('joinErr','Nhập ID và mật khẩu phòng');return}
+  const room=getRoom(id);
+  if(!room){showErr('joinErr','Phòng không tồn tại');return}
+  if(room.pass!==pass){showErr('joinErr','Sai mật khẩu phòng');return}
+  if(room.players.length>=room.max){showErr('joinErr','Phòng đã đầy');return}
+  if(room.status!=='waiting'){showErr('joinErr','Ván bài đang diễn ra');return}
+  if(!room.players.includes(me.username)){
+    room.players.push(me.username);
+    updateRoom(id,room);
+  }
+  inRoom=id;
+  enterRoom(id);
+}
+
+function renderRoomBrowser(){
+  const rooms=getRooms();
+  const el=document.getElementById('roomListEl');
+  el.innerHTML='';
+  const list=Object.values(rooms).filter(r=>r.status==='waiting');
+  if(!list.length){el.innerHTML='<div style="text-align:center;color:#9dbfa0;padding:20px;font-size:13px">Không có phòng nào đang mở</div>';return}
+  list.forEach(r=>{
+    const div=document.createElement('div');div.className='room-item';
+    div.innerHTML=`<div><div class="rname">${escHtml(r.name)} <span class="lock-icon">🔒</span></div>
+      <div class="rinfo">${r.gameType==='xidach'?'🂡 Xì Dách':'🃏 Tiến Lên'} · ${r.players.length}/${r.max} người · 🪙${r.bet}/ván</div>
+      <div class="rinfo">ID: <strong>${r.id}</strong></div></div>
+      <button class="btn btn-sm btn-green" onclick="quickJoinRoom('${r.id}')">Vào</button>`;
+    el.appendChild(div);
+  });
+}
+
+function quickJoinRoom(id){
+  document.getElementById('roomBrowser').style.display='none';
+  document.getElementById('joinRoom').style.display='block';
+  document.getElementById('joinId').value=id;
+}
+
+function enterRoom(id){
+  ['createRoom','joinRoom','roomBrowser','mainMenu'].forEach(x=>document.getElementById(x).style.display='none');
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('gameRoom').style.display='block';
+  document.getElementById('gameRoom').className='show';
+  refreshRoom();
+  startRoomPolling();
+}
+
+let roomPollTimer=null;
+function startRoomPolling(){
+  if(roomPollTimer)clearInterval(roomPollTimer);
+  roomPollTimer=setInterval(()=>{if(inRoom)refreshRoom()},1200);
+}
+function stopPolling(){if(roomPollTimer)clearInterval(roomPollTimer);roomPollTimer=null}
+
+function leaveRoom(){
+  if(!inRoom)return;
+  const room=getRoom(inRoom);
+  if(room){
+    room.players=room.players.filter(p=>p!==me.username);
+    if(room.players.length===0){const rs=getRooms();delete rs[inRoom];saveRooms(rs)}
+    else{if(room.host===me.username)room.host=room.players[0];updateRoom(inRoom,room)}
+  }
+  inRoom=null;stopPolling();
+  document.getElementById('gameRoom').className='';
+  document.getElementById('lobby').style.display='flex';
+  document.getElementById('mainMenu').style.display='block';
+  refreshMyCoin();
+}
+
+function onBroadcast(data){
+  if(data.type==='rooms_update'&&inRoom)refreshRoom();
+  if(data.type==='users_update')refreshMyCoin();
+}
+
+// ======================================================
+// ROOM RENDER
+// ======================================================
+function refreshRoom(){
+  if(!inRoom)return;
+  const room=getRoom(inRoom);
+  if(!room){leaveRoom();return}
+  // Make sure current player is still in room
+  if(!room.players.includes(me.username)){
+    if(room.status==='waiting'){room.players.push(me.username);updateRoom(inRoom,room)}
+  }
+  document.getElementById('roomTitleDisp').textContent=room.name;
+  document.getElementById('roomSubDisp').textContent=(room.gameType==='xidach'?'🂡 Xì Dách':'🃏 Tiến Lên')+' · Mức cược: 🪙'+room.bet;
+  document.getElementById('roomIdDisp').textContent='ID: '+room.id+' 🔒';
+  refreshMyCoin();
+  if(room.status==='waiting')renderWaiting(room);
+  else if(room.gameType==='xidach')renderBlackjack(room);
+  else renderTienLen(room);
+  renderChat(room);
+}
+
+// ======================================================
+// WAITING ROOM
+// ======================================================
+function renderWaiting(room){
+  const isHost=room.host===me.username;
+  const gc=document.getElementById('gameContent');
+  const users=getUsers();
+  let html=`<div class="waiting-msg"><h3 style="color:var(--gold);margin-bottom:6px">⏳ Đang chờ người chơi</h3>
+    <p style="font-size:13px">${room.players.length}/${room.max} người đã vào · Cần tối thiểu 2 người</p></div>
+    <div class="player-list-wait">`;
+  room.players.forEach(p=>{
+    const u=users[p]||{displayName:p,coins:0};
+    const icon=['🦁','🐯','🐻','🦊','🐼','🐸','🐨','🦅'][room.players.indexOf(p)%8];
+    html+=`<div class="plw-item"><div class="picon">${icon}</div><div class="pinfo"><strong>${escHtml(u.displayName)}${p===room.host?' 👑':''}</strong><span>🪙 ${u.coins} xu</span></div>
+    <div class="ready-dot yes" title="Đã sẵn sàng"></div></div>`;
+  });
+  html+=`</div>`;
+  if(isHost&&room.players.length>=2){
+    html+=`<div class="ready-row"><button class="btn btn-gold" style="width:200px" onclick="startGame()">▶ Bắt đầu ván</button></div>`;
+  } else if(!isHost){
+    html+=`<div class="waiting-msg" style="padding:8px;font-size:13px;color:#9dbfa0">Chờ chủ phòng bắt đầu...</div>`;
+  }
+  gc.innerHTML=html;
+}
+
+// ======================================================
+// CARD UTILS
+// ======================================================
+const SUITS=['♠','♥','♦','♣'];
+const SUITS_COLOR={♠:'black',♥:'red',♦:'red',♣:'black'};
+const RANKS_XD=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+function fullDeck(){
+  const d=[];
+  SUITS.forEach(s=>RANKS_XD.forEach(r=>d.push({r,s})));
+  return d;
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a}
+
+function cardHtml(card,small=false){
+  if(!card)return`<div class="card" style="background:#1a5a9a;border-color:#0a3a7a"><div style="color:#1a5a9a;font-size:24px">🂠</div></div>`;
+  const isRed=SUITS_COLOR[card.s]==='red';
+  if(small)return`<div class="mini-card${isRed?' red-card':''}">${card.r}${card.s}</div>`;
+  return`<div class="card${isRed?' red':''}"><span class="rank">${card.r}${card.s}</span><span class="suit">${card.s}</span><span class="rank-bot">${card.r}${card.s}</span></div>`;
+}
+function hiddenCardHtml(small=false){
+  if(small)return`<div class="mini-card hidden-card">🂠</div>`;
+  return`<div class="card" style="background:linear-gradient(135deg,#1a5a9a,#0d3a7a);border-color:#0a3a7a"><div style="font-size:28px;margin:auto">🂠</div></div>`;
+}
+
+// ======================================================
+// BLACKJACK
+// ======================================================
+function bj_value(hand){
+  let s=0,aces=0;
+  hand.forEach(c=>{
+    if(!c||c.hidden)return;
+    if(['J','Q','K'].includes(c.r))s+=10;
+    else if(c.r==='A'){s+=11;aces++}
+    else s+=parseInt(c.r);
+  });
+  while(s>21&&aces>0){s-=10;aces--}
+  return s;
+}
+
+function startGame(){
+  const room=getRoom(inRoom);
+  if(!room||room.host!==me.username)return;
+  if(room.players.length<2){toast('Cần ít nhất 2 người');return}
+  const users=getUsers();
+  // Check coins
+  for(const p of room.players){
+    if((users[p]?.coins||0)<room.bet){toast(users[p]?.displayName+' không đủ xu!');return}
+  }
+  if(room.gameType==='xidach')startBlackjack(room,users);
+  else startTienLen(room,users);
+}
+
+function startBlackjack(room,users){
+  const deck=shuffle(fullDeck());
+  const hands={};
+  room.players.forEach(p=>{hands[p]=[deck.pop(),deck.pop()]});
+  // dealer = host (nhà cái) 
+  const dealer=room.host;
+  hands['__dealer']=[deck.pop(),{...deck.pop(),hidden:true}];
+  const bets={};
+  room.players.forEach(p=>{
+    bets[p]=room.bet;
+    users[p].coins-=room.bet;
+  });
+  saveUsers(users);
+  room.status='playing';
+  room.gameState={phase:'player_turns',deck,hands,bets,dealer,
+    turnIndex:0,turnPlayer:room.players[0],results:{},pot:room.players.length*room.bet,
+    doubled:{}};
+  updateRoom(inRoom,room);
+}
+
+function renderBlackjack(room){
+  const gs=room.gameState;
+  const gc=document.getElementById('gameContent');
+  const users=getUsers();
+  const myHand=gs.hands[me.username]||[];
+  const myScore=bj_value(myHand);
+  const isMyTurn=gs.turnPlayer===me.username&&gs.phase==='player_turns';
+  const isHost=room.host===me.username;
+
+  let html=`<div class="tl-table">`;
+
+  // Dealer hand (show one hidden if still playing)
+  const dealerHand=gs.hands['__dealer']||[];
+  const showDealerFull=gs.phase==='dealer_turn'||gs.phase==='done';
+  const dealerScore=showDealerFull?bj_value(dealerHand.map(c=>({...c,hidden:false}))):'?';
+  html+=`<div class="center-area"><div class="pname" style="margin-bottom:8px">🏠 Nhà cái (${showDealerFull?dealerScore:'?'})</div>
+  <div class="my-hand">`;
+  dealerHand.forEach((c,i)=>{
+    html+=(i===1&&!showDealerFull)?hiddenCardHtml():cardHtml({...c,hidden:false});
+  });
+  html+=`</div></div>`;
+
+  // Players
+  html+=`<div class="players-ring">`;
+  room.players.forEach(p=>{
+    const u=users[p]||{displayName:p};
+    const hand=gs.hands[p]||[];
+    const score=bj_value(hand);
+    const bust=score>21;
+    const isActive=gs.turnPlayer===p&&gs.phase==='player_turns';
+    const hasResult=gs.results&&gs.results[p];
+    const isMe=p===me.username;
+    html+=`<div class="player-slot${isActive?' active-turn':''}${bust?' bust':''}${isMe?' is-me':''}">
+      <div class="pname">${escHtml(u.displayName)}${p===room.host?' 👑':''}</div>
+      <div class="pcoins">🪙${users[p]?.coins||0}</div>
+      <div class="mini-cards">`;
+    if(isMe){
+      hand.forEach(c=>html+=cardHtml({...c,hidden:false},true));
+    } else {
+      hand.forEach(()=>html+=hiddenCardHtml(true));
     }
-
-    function hideAuthLoading() {
-      if (authChecked) return;
-      authChecked = true;
-      const el = document.getElementById("authLoading");
-      el.classList.add("hide");
-      setTimeout(() => el.style.display = "none", 400);
+    html+=`</div><div class="score-badge">${isMe?score:'?'}${bust?' 💥':''}</div>`;
+    if(hasResult){
+      const r=gs.results[p];
+      html+=`<div class="result-badge result-${r.type}">${r.type==='win'?'🏆 +'+r.amount:r.type==='lose'?'💸 -'+r.amount:'🤝 Hòa'}</div>`;
     }
+    html+=`</div>`;
+  });
+  html+=`</div>`;
 
-    // =====================================================
-    // DOM
-    // =====================================================
-    const loginPage = document.getElementById("loginPage");
-    const registerPage = document.getElementById("registerPage");
-    const app = document.getElementById("app");
-    const chatList = document.getElementById("chatList");
-    const messagesEl = document.getElementById("messages");
-    const chatWindow = document.getElementById("chatWindow");
-    const emptyState = document.getElementById("emptyState");
-    const profilePage = document.getElementById("profilePage");
-    const adminPage = document.getElementById("adminPage");
+  // Status
+  html+=`<div class="status-msg">`;
+  if(gs.phase==='player_turns'){
+    const tn=users[gs.turnPlayer]?.displayName||gs.turnPlayer;
+    html+=`<div class="turn-indicator">🎯 Lượt của: ${escHtml(tn)}</div>`;
+  } else if(gs.phase==='dealer_turn'){html+=`<div class="turn-indicator">🏠 Nhà cái đang rút...</div>`}
+  else if(gs.phase==='done'){html+=`<div class="turn-indicator" style="color:#27a85f">✅ Ván kết thúc</div>`}
+  html+=`</div>`;
 
-    // =====================================================
-    // AUTH
-    // =====================================================
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        currentUser = user;
-        const ref = db.collection("users").doc(user.uid);
-        const snap = await ref.get();
-        userProfile = snap.exists ? snap.data() : null;
+  // My cards big + actions
+  html+=`<div class="center-area"><div class="pname" style="margin-bottom:8px">🂡 Bài của bạn (${myScore}${myScore>21?' 💥':myScore===21?' 🌟':''})</div>
+  <div class="my-hand">`;
+  myHand.forEach(c=>html+=cardHtml({...c,hidden:false}));
+  html+=`</div>`;
 
-        // Nếu chưa có hồ sơ (vd. tài khoản khách/ẩn danh chưa từng lưu) thì tạo mới
-        if (!userProfile) {
-          const guestName = "Khách#" + user.uid.slice(0, 5).toUpperCase();
-          userProfile = {
-            uid: user.uid,
-            email: user.email || "",
-            displayName: user.displayName || (user.isAnonymous ? guestName : "Người dùng"),
-            photoURL: user.photoURL || "",
-            bio: "",
-            role: "user",
-            isGuest: !!user.isAnonymous,
-            banned: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-          };
-          await ref.set(userProfile);
-        }
+  if(isMyTurn&&gs.phase==='player_turns'){
+    const canDouble=myHand.length===2&&!gs.doubled[me.username]&&(users[me.username]?.coins||0)>=room.bet;
+    html+=`<div class="action-row">
+      <button class="btn btn-gold" onclick="bjHit()">👆 Rút thêm</button>
+      <button class="btn btn-green" onclick="bjStand()">✋ Dừng</button>
+      ${canDouble?`<button class="btn btn-gray" onclick="bjDouble()">💰 Gấp đôi</button>`:''}
+    </div>`;
+  } else if(isHost&&gs.phase==='dealer_turn'){
+    html+=`<div class="action-row"><button class="btn btn-gold" onclick="bjDealerPlay()">🏠 Nhà cái rút bài</button></div>`;
+  } else if(gs.phase==='done'&&isHost){
+    html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  } else if(!isMyTurn&&gs.phase==='player_turns'){
+    html+=`<div style="color:#9dbfa0;font-size:13px;margin-top:8px">Chờ lượt của bạn...</div>`;
+  }
+  html+=`</div></div>`;
 
-        // Kiểm tra nếu bị khóa
-        if (userProfile?.banned) {
-          toast("Tài khoản của bạn đã bị khóa bởi Admin.", "error", 4000);
-          await auth.signOut();
-          hideAuthLoading();
-          return;
-        }
+  gc.innerHTML=html;
+}
 
-        // Nếu hệ thống chưa có ai giữ quyền "Admin chính chủ", người đăng
-        // nhập/đăng ký này sẽ tự động trở thành Admin chính chủ (owner).
-        if (userProfile.role !== "owner" && !user.isAnonymous) {
-          const became = await claimOwnerIfNoneExists(user.uid);
-          if (became) {
-            userProfile.role = "owner";
-            toast("Bạn là người đầu tiên vào hệ thống → đã trở thành Admin chính chủ!", "success", 5000);
-          }
-        }
+window.bjHit=function(){
+  const room=getRoom(inRoom);
+  if(!room||room.gameState?.turnPlayer!==me.username)return;
+  const gs=room.gameState;
+  const card=gs.deck.pop();
+  gs.hands[me.username].push(card);
+  const score=bj_value(gs.hands[me.username]);
+  if(score>=21)bjNextTurn(room);
+  else{room.gameState=gs;updateRoom(inRoom,room)}
+}
+window.bjStand=function(){
+  const room=getRoom(inRoom);
+  if(!room||room.gameState?.turnPlayer!==me.username)return;
+  bjNextTurn(room);
+}
+window.bjDouble=function(){
+  const room=getRoom(inRoom);
+  const gs=room.gameState;
+  if(!gs||gs.turnPlayer!==me.username)return;
+  const users=getUsers();
+  if((users[me.username]?.coins||0)<room.bet){toast('Không đủ xu!');return}
+  users[me.username].coins-=room.bet;
+  saveUsers(users);
+  gs.bets[me.username]+=room.bet;
+  gs.pot+=room.bet;
+  gs.doubled[me.username]=true;
+  gs.hands[me.username].push(gs.deck.pop());
+  bjNextTurn(room);
+}
+function bjNextTurn(room){
+  const gs=room.gameState;
+  const idx=gs.turnIndex+1;
+  if(idx>=room.players.length){
+    // All players done → dealer turn
+    gs.phase='dealer_turn';gs.turnIndex=0;gs.turnPlayer=null;
+    room.gameState=gs;updateRoom(inRoom,room);
+    // Auto trigger dealer if this client is host
+    if(room.host===me.username)setTimeout(()=>bjDealerPlay(),800);
+  } else {
+    gs.turnIndex=idx;gs.turnPlayer=room.players[idx];
+    room.gameState=gs;updateRoom(inRoom,room);
+  }
+}
+window.bjDealerPlay=function(){
+  const room=getRoom(inRoom);
+  if(!room||room.host!==me.username)return;
+  const gs=room.gameState;
+  // Reveal dealer card
+  gs.hands['__dealer']=gs.hands['__dealer'].map(c=>({...c,hidden:false}));
+  // Dealer draws until 17+
+  while(bj_value(gs.hands['__dealer'])<17)gs.hands['__dealer'].push(gs.deck.pop());
+  const dealerScore=bj_value(gs.hands['__dealer']);
+  const dealerBust=dealerScore>21;
+  const users=getUsers();
+  gs.results={};
+  room.players.forEach(p=>{
+    const pScore=bj_value(gs.hands[p]);
+    const pBust=pScore>21;
+    const bet=gs.bets[p];
+    let type,amount;
+    if(pBust){type='lose';amount=bet}
+    else if(dealerBust||pScore>dealerScore){type='win';amount=bet;users[p].coins+=bet*2}
+    else if(pScore===dealerScore){type='draw';amount=0;users[p].coins+=bet}
+    else{type='lose';amount=bet}
+    gs.results[p]={type,amount};
+  });
+  saveUsers(users);
+  gs.phase='done';room.gameState=gs;updateRoom(inRoom,room);
+}
 
-        showApp();
-        loadChats();
-        loadAllUsers();
-        startHeartbeat();
-      } else {
-        currentUser = null;
-        userProfile = null;
-        stopHeartbeat();
-        showLogin();
-      }
-      hideAuthLoading();
-    });
+// ======================================================
+// TIẾN LÊN
+// ======================================================
+const TL_RANKS=['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
+const TL_SUITS=['♠','♣','♦','♥']; // spade < club < diamond < heart
+function tlCardValue(c){return TL_RANKS.indexOf(c.r)*4+TL_SUITS.indexOf(c.s)}
+function tlSort(hand){return [...hand].sort((a,b)=>tlCardValue(a)-tlCardValue(b))}
+function tlSuits(cards){return cards.every(c=>c.s===cards[0].s)}
+function tlSameRank(cards){return cards.every(c=>c.r===cards[0].r)}
+function tlIsSeq(cards){
+  const sorted=tlSort(cards);
+  // No 2s in straight
+  if(sorted.some(c=>c.r==='2'))return false;
+  for(let i=1;i<sorted.length;i++){
+    if(TL_RANKS.indexOf(sorted[i].r)!==TL_RANKS.indexOf(sorted[i-1].r)+1)return false;
+  }
+  return true;
+}
+function tlIsValid(cards){
+  const n=cards.length;
+  if(n===0)return false;
+  if(n===1)return true;
+  if(n===2)return tlSameRank(cards);
+  if(n===3)return tlSameRank(cards)||tlIsSeq(cards);
+  if(n===4)return tlSameRank(cards)||tlIsSeq(cards);
+  return tlIsSeq(cards);
+}
+function tlBeats(played,pile){
+  if(!pile||pile.length===0)return true;
+  if(played.length!==pile.length)return false;
+  // single 2 logic (2 beats all single except 2)
+  const ps=tlSort(played),pi=tlSort(pile);
+  return tlCardValue(ps[ps.length-1])>tlCardValue(pi[pi.length-1]);
+}
 
-    // Ping "đang hoạt động" mỗi 45s để hiển thị trạng thái online trong Admin
-    function startHeartbeat() {
-      stopHeartbeat();
-      const ping = () => db.collection("users").doc(currentUser.uid)
-        .update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
-      ping();
-      heartbeatInterval = setInterval(ping, 45000);
+function startTienLen(room,users){
+  const deck=shuffle(fullDeck());
+  const hands={};
+  const perPlayer=Math.floor(deck.length/room.players.length);
+  room.players.forEach((p,i)=>{
+    hands[p]=tlSort(deck.slice(i*perPlayer,(i+1)*perPlayer));
+  });
+  // Find who has 3♠ → goes first
+  let firstPlayer=room.players[0];
+  room.players.forEach(p=>{if(hands[p].some(c=>c.r==='3'&&c.s==='♠'))firstPlayer=p});
+  const bets={};
+  room.players.forEach(p=>{
+    bets[p]=room.bet;
+    users[p].coins-=room.bet;
+  });
+  saveUsers(users);
+  room.status='playing';
+  room.gameState={phase:'playing',hands,bets,turnPlayer:firstPlayer,
+    pile:[],passCount:0,lastPlayBy:null,round:1,finished:[]};
+  updateRoom(inRoom,room);
+}
+
+let tlSelected=[];
+
+function renderTienLen(room){
+  const gs=room.gameState;
+  const gc=document.getElementById('gameContent');
+  const users=getUsers();
+  const myHand=gs.hands[me.username]?tlSort(gs.hands[me.username]):[];
+  const isMyTurn=gs.turnPlayer===me.username&&gs.phase==='playing';
+
+  let html=`<div class="tl-table">`;
+
+  // Players ring
+  html+=`<div class="players-ring">`;
+  room.players.forEach(p=>{
+    const u=users[p]||{displayName:p};
+    const hand=gs.hands[p]||[];
+    const isMe=p===me.username;
+    const isActive=gs.turnPlayer===p;
+    const finished=gs.finished&&gs.finished.includes(p);
+    const rank=gs.finished?gs.finished.indexOf(p)+1:0;
+    html+=`<div class="player-slot${isActive?' active-turn':''}${isMe?' is-me':''}${finished?' bust':''}">
+      <div class="pname">${escHtml(u.displayName)}${p===room.host?' 👑':''}${finished?` 🏅#${rank}`:''}</div>
+      <div class="pcoins">🪙${users[p]?.coins||0}</div>
+      <div class="mini-cards">`;
+    if(isMe){myHand.forEach(c=>html+=cardHtml(c,true))}
+    else{for(let i=0;i<hand.length;i++)html+=hiddenCardHtml(true)}
+    html+=`</div><div class="score-badge">${hand.length} lá${finished?' (Xong)':''}</div></div>`;
+  });
+  html+=`</div>`;
+
+  // Pile
+  html+=`<div class="center-area"><div class="pname" style="margin-bottom:8px">🃏 Bài trên bàn ${gs.lastPlayBy?'('+escHtml(users[gs.lastPlayBy]?.displayName||gs.lastPlayBy)+')':''}</div>
+  <div class="tl-pile">`;
+  if(gs.pile&&gs.pile.length>0){gs.pile.forEach(c=>html+=cardHtml(c))}
+  else{html+=`<div class="pile-label">Bàn trống — ai đánh trước</div>`}
+  html+=`</div></div>`;
+
+  // My hand (big, selectable)
+  html+=`<div class="center-area"><div class="pname" style="margin-bottom:8px">🂡 Bài của bạn (${myHand.length} lá)</div>
+  <div class="my-hand" id="myHandEl">`;
+  myHand.forEach((c,i)=>{
+    const sel=tlSelected.some(s=>s.r===c.r&&s.s===c.s);
+    const isRed=SUITS_COLOR[c.s]==='red';
+    html+=`<div class="card${sel?' selected':''}${isRed?' red':''}" onclick="tlToggleCard(${i})">
+      <span class="rank">${c.r}${c.s}</span><span class="suit">${c.s}</span><span class="rank-bot">${c.r}${c.s}</span></div>`;
+  });
+  html+=`</div>`;
+
+  if(isMyTurn){
+    html+=`<div class="action-row">
+      <button class="btn btn-gold" onclick="tlPlay()">▶ Đánh</button>
+      ${gs.pile&&gs.pile.length>0?`<button class="btn btn-gray" onclick="tlPass()">⏭ Bỏ lượt</button>`:''}
+      <button class="btn btn-gray btn-sm" onclick="tlClear()">✕ Bỏ chọn</button>
+    </div>`;
+  } else {
+    html+=`<div style="color:#9dbfa0;font-size:13px;margin-top:8px">Chờ lượt của bạn...</div>`;
+  }
+
+  if(gs.phase==='done'&&room.host===me.username){
+    html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  }
+  html+=`</div></div>`;
+  gc.innerHTML=html;
+}
+
+window.tlToggleCard=function(i){
+  const room=getRoom(inRoom);
+  if(!room||room.gameState?.turnPlayer!==me.username)return;
+  const myHand=tlSort(room.gameState.hands[me.username]||[]);
+  const card=myHand[i];
+  const idx=tlSelected.findIndex(c=>c.r===card.r&&c.s===card.s);
+  if(idx>=0)tlSelected.splice(idx,1);
+  else tlSelected.push(card);
+  renderTienLen(room);
+}
+window.tlClear=function(){tlSelected=[];const room=getRoom(inRoom);if(room)renderTienLen(room)}
+window.tlPlay=function(){
+  if(tlSelected.length===0){toast('Chọn bài để đánh');return}
+  const room=getRoom(inRoom);
+  const gs=room.gameState;
+  if(!gs||gs.turnPlayer!==me.username){toast('Chưa đến lượt');return}
+  if(!tlIsValid(tlSelected)){toast('Bộ bài không hợp lệ');return}
+  if(!tlBeats(tlSelected,gs.pile)){toast('Bài yếu hơn bài trên bàn');return}
+  // Remove from hand
+  let hand=[...gs.hands[me.username]];
+  tlSelected.forEach(sel=>{const i=hand.findIndex(c=>c.r===sel.r&&c.s===sel.s);if(i>=0)hand.splice(i,1)});
+  gs.hands[me.username]=hand;
+  gs.pile=[...tlSelected];
+  gs.passCount=0;
+  gs.lastPlayBy=me.username;
+  tlSelected=[];
+  if(hand.length===0){
+    gs.finished=gs.finished||[];
+    gs.finished.push(me.username);
+    const remaining=room.players.filter(p=>!gs.finished.includes(p));
+    if(remaining.length<=1){
+      // Game over
+      gs.phase='done';
+      const users=getUsers();
+      tlSettleCoins(room,gs,users);
+      room.gameState=gs;updateRoom(inRoom,room);return;
     }
-    function stopHeartbeat() {
-      if (heartbeatInterval) clearInterval(heartbeatInterval);
-      heartbeatInterval = null;
-    }
-
-    function isAdmin() {
-      if (!userProfile) return false;
-      return userProfile.role === "admin" || userProfile.role === "owner";
-    }
-
-    function isOwner() {
-      return userProfile?.role === "owner";
-    }
-
-    // Giành quyền "Admin chính chủ" cho người đầu tiên đăng ký/đăng nhập.
-    // Dùng transaction trên tài liệu meta/appMeta để đảm bảo chỉ 1 người
-    // duy nhất thắng, kể cả khi nhiều người cùng đăng ký gần như đồng thời.
-    async function claimOwnerIfNoneExists(uid) {
-      const metaRef = db.collection("meta").doc("appMeta");
-      let becameOwner = false;
-      try {
-        await db.runTransaction(async (tx) => {
-          const metaSnap = await tx.get(metaRef);
-          if (metaSnap.exists && metaSnap.data().ownerClaimed) return;
-          tx.set(metaRef, { ownerClaimed: true, ownerUid: uid, claimedAt: firebase.firestore.FieldValue.serverTimestamp() });
-          tx.update(db.collection("users").doc(uid), { role: "owner" });
-          becameOwner = true;
-        });
-      } catch (err) {
-        console.warn("Không thể kiểm tra quyền owner:", err);
-      }
-      return becameOwner;
-    }
-
-    function showLogin() {
-      loginPage.classList.remove("hidden");
-      registerPage.classList.add("hidden");
-      app.classList.remove("show");
-    }
-
-    function showRegister() {
-      loginPage.classList.add("hidden");
-      registerPage.classList.remove("hidden");
-      app.classList.remove("show");
-    }
-
-    function showApp() {
-      loginPage.classList.add("hidden");
-      registerPage.classList.add("hidden");
-      app.classList.add("show");
-      updateMyInfo();
-
-      // Hiện tab Admin nếu là admin
-      const adminTab = document.getElementById("tabAdmin");
-      if (isAdmin()) {
-        adminTab.classList.remove("hidden");
-      } else {
-        adminTab.classList.add("hidden");
-      }
-    }
-
-    document.getElementById("showRegister").onclick = showRegister;
-    document.getElementById("showLogin").onclick = showLogin;
-
-    // Đăng nhập email
-    document.getElementById("loginForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("loginEmail").value;
-      const password = document.getElementById("loginPassword").value;
-      const errBox = document.getElementById("loginError");
-      errBox.classList.add("hidden");
-
-      try {
-        await auth.signInWithEmailAndPassword(email, password);
-      } catch (err) {
-        errBox.textContent = "Email hoặc mật khẩu không đúng";
-        errBox.classList.remove("hidden");
-        shakeCard(errBox);
-      }
-    };
-
-    function shakeCard(errBox) {
-      const card = errBox.closest(".auth-card");
-      if (!card) return;
-      card.classList.remove("shake");
-      void card.offsetWidth;
-      card.classList.add("shake");
-    }
-
-    // Đăng ký
-    document.getElementById("registerForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const name = document.getElementById("regName").value.trim();
-      const email = document.getElementById("regEmail").value;
-      const password = document.getElementById("regPassword").value;
-      const confirm = document.getElementById("regConfirm").value;
-      const errBox = document.getElementById("registerError");
-      errBox.classList.add("hidden");
-
-      if (password !== confirm) {
-        errBox.textContent = "Mật khẩu không khớp";
-        errBox.classList.remove("hidden");
-        shakeCard(errBox);
-        return;
-      }
-
-      try {
-        const cred = await auth.createUserWithEmailAndPassword(email, password);
-        await cred.user.updateProfile({ displayName: name });
-
-        // Vai trò mặc định là "user". Nếu đây là người đầu tiên vào hệ
-        // thống, quyền Admin chính chủ sẽ được tự động cấp ngay sau khi
-        // đăng nhập thành công (xử lý trong onAuthStateChanged).
-        await db.collection("users").doc(cred.user.uid).set({
-          uid: cred.user.uid,
-          email,
-          displayName: name,
-          photoURL: "",
-          bio: "",
-          role: "user",
-          banned: false,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (err) {
-        const map = {
-          "auth/email-already-in-use": "Email này đã được đăng ký trên thiết bị này rồi, hãy đăng nhập hoặc dùng email khác",
-          "auth/invalid-email": "Vui lòng nhập email"
-        };
-        errBox.textContent = map[err.code] || "Đăng ký thất bại, vui lòng thử lại";
-        errBox.classList.remove("hidden");
-        shakeCard(errBox);
-      }
-    };
-
-    // Đăng nhập bằng tài khoản ảo (ẩn danh) - không cần email/mật khẩu
-    document.getElementById("guestLoginBtn").onclick = async () => {
-      const btn = document.getElementById("guestLoginBtn");
-      btn.disabled = true;
-      btn.textContent = "Đang vào...";
-      try {
-        await auth.signInAnonymously();
-        // Hồ sơ (Khách#xxxxx) sẽ được tự tạo trong onAuthStateChanged
-      } catch (err) {
-        console.error(err);
-        toast("Không thể vào bằng tài khoản ảo. Hãy bật 'Anonymous' trong Firebase Auth.", "error", 5000);
-      }
-      btn.disabled = false;
-      btn.textContent = "👤 Vào chơi bằng tài khoản ảo (khách)";
-    };
-
-    // Đăng xuất
-    document.getElementById("logoutBtn").onclick = () => {
-      stopHeartbeat();
-      auth.signOut();
-    };
-
-    // =====================================================
-    // UI HELPERS
-    // =====================================================
-    function updateMyInfo() {
-      const name = userProfile?.displayName || currentUser.displayName || "Người dùng";
-      const photo = userProfile?.photoURL || currentUser.photoURL || "";
-      document.getElementById("myName").textContent = name;
-      let label = "Xem trang cá nhân";
-      if (isOwner()) label = "👑 Admin chính chủ • Xem trang cá nhân";
-      else if (isAdmin()) label = "Admin • Xem trang cá nhân";
-      else if (userProfile?.isGuest) label = "Tài khoản khách • Xem trang cá nhân";
-      document.getElementById("myRoleLabel").textContent = label;
-      setAvatar(document.getElementById("myAvatar"), name, photo, isAdmin());
-    }
-
-    function setAvatar(el, name, photo, admin = false) {
-      if (photo) {
-        el.innerHTML = `<img src="${photo}" alt="" />`;
-      } else {
-        el.innerHTML = `<span>${(name || "U").charAt(0).toUpperCase()}</span>`;
-      }
-      if (admin) el.classList.add("admin-badge");
-      else el.classList.remove("admin-badge");
-    }
-
-    function hideAllMain() {
-      emptyState.style.display = "none";
-      chatWindow.classList.remove("show");
-      profilePage.classList.remove("show");
-      adminPage.classList.remove("show");
-    }
-
-    function showEmpty() {
-      hideAllMain();
-      emptyState.style.display = "flex";
-      selectedChat = null;
-    }
-
-    function showChat() {
-      hideAllMain();
-      chatWindow.classList.add("show");
-    }
-
-    function showProfilePage() {
-      hideAllMain();
-      profilePage.classList.add("show");
-      selectedChat = null;
-
-      const name = userProfile?.displayName || currentUser.displayName || "";
-      const photo = userProfile?.photoURL || currentUser.photoURL || "";
-      document.getElementById("profileName").value = name;
-      document.getElementById("profileEmail").value = currentUser.email || "";
-      document.getElementById("profileBio").value = userProfile?.bio || "";
-      setAvatar(document.getElementById("profileAvatar"), name, photo, isAdmin());
-    }
-
-    function showAdminPage() {
-      hideAllMain();
-      adminPage.classList.add("show");
-      selectedChat = null;
-      renderAdmin();
-    }
-
-    document.getElementById("openProfile").onclick = showProfilePage;
-
-    // =====================================================
-    // CHATS & USERS
-    // =====================================================
-    function loadChats() {
-      db.collection("chats")
-        .where("members", "array-contains", currentUser.uid)
-        .onSnapshot(async (snap) => {
-          allChats = [];
-          for (const doc of snap.docs) {
-            const data = doc.data();
-            const otherUid = data.members.find(id => id !== currentUser.uid);
-            let otherUser = { displayName: "Người dùng", photoURL: "" };
-            if (otherUid) {
-              const uSnap = await db.collection("users").doc(otherUid).get();
-              if (uSnap.exists) otherUser = uSnap.data();
-            }
-            allChats.push({ id: doc.id, ...data, otherUser });
-          }
-          allChats.sort((a, b) => {
-            const tA = a.lastMessageAt?.toMillis?.() || 0;
-            const tB = b.lastMessageAt?.toMillis?.() || 0;
-            return tB - tA;
-          });
-          if (currentTab === "chats") renderList();
-          if (isAdmin()) updateAdminStats();
-        });
-    }
-
-    function loadAllUsers() {
-      db.collection("users").onSnapshot((snap) => {
-        allUsers = snap.docs.map(d => d.data());
-        if (currentTab === "users" || currentTab === "admin") renderList();
-        if (isAdmin()) {
-          updateAdminStats();
-          if (currentTab === "admin") renderAdmin();
-        }
-      });
-    }
-
-    function renderList() {
-      const search = document.getElementById("searchInput").value.toLowerCase();
-      chatList.innerHTML = "";
-
-      if (currentTab === "chats") {
-        const filtered = allChats.filter(c =>
-          (c.otherUser?.displayName || "").toLowerCase().includes(search)
-        );
-        if (filtered.length === 0) {
-          chatList.innerHTML = `<p class="empty-list">Chưa có cuộc trò chuyện nào</p>`;
-          return;
-        }
-        filtered.forEach((chat, i) => {
-          const div = document.createElement("div");
-          div.className = "chat-item" + (selectedChat?.id === chat.id ? " active" : "");
-          div.style.animationDelay = (i * 0.04) + "s";
-          const online = isOnline(chat.otherUser || {});
-          div.innerHTML = `
-            <div class="avatar-wrap">
-              <div class="avatar"></div>
-              ${online ? '<span class="online-dot"></span>' : ''}
-            </div>
-            <div class="chat-info">
-              <strong>${escapeHtml(chat.otherUser?.displayName || "Người dùng")}</strong>
-              <p class="last-msg">${escapeHtml(chat.lastMessage || "Bắt đầu chat")}</p>
-            </div>`;
-          setAvatar(div.querySelector(".avatar"), chat.otherUser?.displayName, chat.otherUser?.photoURL);
-          div.onclick = () => openChat(chat);
-          chatList.appendChild(div);
-        });
-      } else if (currentTab === "users") {
-        const filtered = allUsers.filter(u =>
-          u.uid !== currentUser.uid &&
-          (u.displayName || "").toLowerCase().includes(search)
-        );
-        filtered.forEach((user, i) => {
-          const div = document.createElement("div");
-          div.className = "chat-item";
-          div.style.animationDelay = (i * 0.04) + "s";
-          const online = isOnline(user);
-          div.innerHTML = `
-            <div class="avatar-wrap">
-              <div class="avatar"></div>
-              ${online ? '<span class="online-dot"></span>' : ''}
-            </div>
-            <div class="chat-info">
-              <strong>${escapeHtml(user.displayName || "Người dùng")}</strong>
-              <p class="last-msg">${escapeHtml(user.bio || "Nhấn để nhắn tin")}</p>
-            </div>`;
-          setAvatar(div.querySelector(".avatar"), user.displayName, user.photoURL, user.role === "admin");
-          div.onclick = () => startChat(user);
-          chatList.appendChild(div);
-        });
-      }
-    }
-
-    document.getElementById("searchInput").oninput = () => {
-      if (currentTab !== "admin") renderList();
-    };
-
-    // Tabs
-    document.getElementById("tabChats").onclick = () => {
-      currentTab = "chats";
-      setActiveTab("tabChats");
-      renderList();
-      showEmpty();
-    };
-    document.getElementById("tabUsers").onclick = () => {
-      currentTab = "users";
-      setActiveTab("tabUsers");
-      renderList();
-      showEmpty();
-    };
-    document.getElementById("tabAdmin").onclick = () => {
-      if (!isAdmin()) return;
-      currentTab = "admin";
-      setActiveTab("tabAdmin");
-      chatList.innerHTML = `<p class="empty-list">Đang ở chế độ Admin</p>`;
-      showAdminPage();
-    };
-
-    function setActiveTab(id) {
-      document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-    }
-
-    // =====================================================
-    // MỞ / TẠO CHAT
-    // =====================================================
-    async function startChat(otherUser) {
-      if (otherUser.banned) {
-        toast("Người dùng này đã bị khóa", "error");
-        return;
-      }
-      const existing = allChats.find(c =>
-        c.members.includes(otherUser.uid) && c.members.includes(currentUser.uid)
-      );
-      if (existing) {
-        openChat(existing);
-        return;
-      }
-
-      const chatId = [currentUser.uid, otherUser.uid].sort().join("_");
-      await db.collection("chats").doc(chatId).set({
-        members: [currentUser.uid, otherUser.uid],
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        lastMessage: "",
-        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      openChat({
-        id: chatId,
-        members: [currentUser.uid, otherUser.uid],
-        otherUser
-      });
-    }
-
-    function openChat(chat) {
-      selectedChat = chat;
-      showChat();
-      document.getElementById("chatName").textContent = chat.otherUser?.displayName || "Người dùng";
-      setAvatar(document.getElementById("chatAvatar"), chat.otherUser?.displayName, chat.otherUser?.photoURL);
-      if (currentTab === "chats") renderList();
-      loadMessages(chat.id);
-
-      if (window.innerWidth <= 700) {
-        app.classList.add("chat-open");
-        document.getElementById("backBtn").style.display = "block";
-      }
-    }
-
-    document.getElementById("backBtn").onclick = () => {
-      app.classList.remove("chat-open");
-      showEmpty();
-    };
-
-    // =====================================================
-    // TIN NHẮN
-    // =====================================================
-    function loadMessages(chatId) {
-      if (unsubscribeMessages) unsubscribeMessages();
-
-      unsubscribeMessages = db.collection("chats").doc(chatId)
-        .collection("messages")
-        .orderBy("createdAt", "asc")
-        .onSnapshot((snap) => {
-          messagesEl.innerHTML = "";
-          snap.forEach((doc, i) => {
-            const msg = doc.data();
-            const isMine = msg.senderId === currentUser.uid;
-            const div = document.createElement("div");
-            div.className = "message " + (isMine ? "mine" : "theirs");
-            div.style.animationDelay = Math.min(i * 0.02, 0.4) + "s";
-
-            let content = "";
-            if (msg.type === "text") {
-              content = `<p>${escapeHtml(msg.text)}</p>`;
-            } else if (msg.type === "image") {
-              content = `<a href="${msg.fileUrl}" target="_blank"><img src="${msg.fileUrl}" class="msg-image" /></a>`;
-            } else if (msg.type === "video") {
-              content = `<video controls class="msg-video"><source src="${msg.fileUrl}" type="${msg.fileType || ''}"></video>`;
-            } else if (msg.type === "file") {
-              content = `<a href="${msg.fileUrl}" target="_blank" class="msg-file">📎 ${escapeHtml(msg.fileName || "File")}</a>`;
-            }
-
-            const time = msg.createdAt?.toDate
-              ? msg.createdAt.toDate().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-              : "";
-
-            div.innerHTML = content + `<span class="time">${time}</span>`;
-            messagesEl.appendChild(div);
-          });
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-        });
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement("div");
-      div.textContent = text || "";
-      return div.innerHTML;
-    }
-
-    // Gửi text
-    document.getElementById("chatForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const input = document.getElementById("msgInput");
-      const text = input.value.trim();
-      if (!text || !selectedChat) return;
-      input.value = "";
-
-      await db.collection("chats").doc(selectedChat.id).collection("messages").add({
-        text,
-        senderId: currentUser.uid,
-        type: "text",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      await db.collection("chats").doc(selectedChat.id).update({
-        lastMessage: text,
-        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    };
-
-    // Gửi file
-    document.getElementById("attachBtn").onclick = () => document.getElementById("fileInput").click();
-
-    document.getElementById("fileInput").onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file || !selectedChat) return;
-      if (file.size > 20 * 1024 * 1024) {
-        toast("File quá lớn (tối đa 20MB)", "error");
-        return;
-      }
-
-      const btn = document.getElementById("attachBtn");
-      btn.textContent = "⏳";
-      btn.disabled = true;
-
-      try {
-        const path = `chats/${selectedChat.id}/${Date.now()}_${file.name}`;
-        const ref = storage.ref(path);
-        await ref.put(file);
-        const url = await ref.getDownloadURL();
-
-        let type = "file";
-        if (file.type.startsWith("image/")) type = "image";
-        else if (file.type.startsWith("video/")) type = "video";
-
-        await db.collection("chats").doc(selectedChat.id).collection("messages").add({
-          text: file.name,
-          fileUrl: url,
-          fileName: file.name,
-          fileType: file.type,
-          senderId: currentUser.uid,
-          type,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        const lastMsg = type === "image" ? "📷 Ảnh" : type === "video" ? "🎥 Video" : "📎 File";
-        await db.collection("chats").doc(selectedChat.id).update({
-          lastMessage: lastMsg,
-          lastMessageAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (err) {
-        console.error(err);
-        toast("Gửi file thất bại", "error");
-      }
-
-      btn.textContent = "📎";
-      btn.disabled = false;
-      e.target.value = "";
-    };
-
-    // =====================================================
-    // PROFILE
-    // =====================================================
-    document.getElementById("profileForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const name = document.getElementById("profileName").value.trim();
-      const bio = document.getElementById("profileBio").value.trim();
-      const msgBox = document.getElementById("profileMsg");
-
-      try {
-        await currentUser.updateProfile({ displayName: name });
-        await db.collection("users").doc(currentUser.uid).update({ displayName: name, bio });
-        userProfile = { ...userProfile, displayName: name, bio };
-        updateMyInfo();
-        msgBox.textContent = "Lưu thành công!";
-        msgBox.classList.remove("hidden");
-        setTimeout(() => msgBox.classList.add("hidden"), 2500);
-      } catch (err) {
-        toast("Có lỗi xảy ra", "error");
-      }
-    };
-
-    document.getElementById("avatarInput").onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file || !file.type.startsWith("image/")) return;
-
-      try {
-        const ref = storage.ref(`avatars/${currentUser.uid}`);
-        await ref.put(file);
-        const url = await ref.getDownloadURL();
-        await currentUser.updateProfile({ photoURL: url });
-        await db.collection("users").doc(currentUser.uid).update({ photoURL: url });
-        userProfile = { ...userProfile, photoURL: url };
-        updateMyInfo();
-        setAvatar(document.getElementById("profileAvatar"), userProfile.displayName, url, isAdmin());
-        toast("Cập nhật ảnh thành công!", "success");
-      } catch (err) {
-        toast("Upload ảnh thất bại", "error");
-      }
-    };
-
-    // =====================================================
-    // ADMIN FUNCTIONS
-    // =====================================================
-    function bumpNumber(id, value) {
-      const el = document.getElementById(id);
-      if (el.textContent != String(value)) {
-        el.textContent = value;
-        el.classList.remove("bump");
-        void el.offsetWidth; // restart animation
-        el.classList.add("bump");
-      }
-    }
-
-    function updateAdminStats() {
-      bumpNumber("statUsers", allUsers.length);
-      bumpNumber("statChats", allChats.length);
-      bumpNumber("statBanned", allUsers.filter(u => u.banned).length);
-    }
-
-    function isOnline(user) {
-      const t = user.lastSeen?.toMillis?.();
-      return !!t && (Date.now() - t) < 2 * 60 * 1000; // hoạt động trong 2 phút gần nhất
-    }
-
-    function renderAdmin() {
-      updateAdminStats();
-      const tbody = document.getElementById("adminUserList");
-      const search = (document.getElementById("adminSearchInput")?.value || "").toLowerCase();
-      tbody.innerHTML = "";
-
-      const filtered = allUsers.filter(u =>
-        (u.displayName || "").toLowerCase().includes(search) ||
-        (u.email || "").toLowerCase().includes(search)
-      );
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#999;padding:24px;">Không tìm thấy người dùng nào</td></tr>`;
-        return;
-      }
-
-      filtered.forEach((user, i) => {
-        const tr = document.createElement("tr");
-        tr.style.animationDelay = (i * 0.03) + "s";
-        const created = user.createdAt?.toDate
-          ? user.createdAt.toDate().toLocaleDateString("vi-VN")
-          : "—";
-
-        let roleClass = "user";
-        let roleText = user.isGuest ? "Khách" : "User";
-        if (user.role === "admin") { roleClass = "admin"; roleText = "Admin"; }
-        if (user.role === "owner") { roleClass = "owner"; roleText = "👑 Chính chủ"; }
-        if (user.banned) { roleClass = "banned"; roleText = "Đã khóa"; }
-
-        const isMe = user.uid === currentUser.uid;
-        const online = isOnline(user);
-        const targetIsOwner = user.role === "owner";
-
-        let actionsHtml;
-        if (isMe) {
-          actionsHtml = '<span style="color:#999;font-size:12px;">Bạn</span>';
-        } else if (targetIsOwner) {
-          // Không ai được khóa hoặc gỡ quyền của Admin chính chủ
-          actionsHtml = '<span style="color:#999;font-size:12px;">Admin chính chủ</span>';
-        } else {
-          const banBtn = user.banned
-            ? `<button class="btn-admin" onclick="unbanUser('${user.uid}')">Mở khóa</button>`
-            : `<button class="btn-danger" onclick="banUser('${user.uid}')">Khóa</button>`;
-          // Chỉ Admin chính chủ (owner) mới được cấp/gỡ quyền Admin phụ
-          const adminBtn = isOwner()
-            ? (user.role !== "admin"
-                ? `<button class="btn-admin" style="margin-left:4px;" onclick="makeAdmin('${user.uid}')">Cấp Admin</button>`
-                : `<button class="btn-danger" style="margin-left:4px;" onclick="removeAdmin('${user.uid}')">Gỡ Admin</button>`)
-            : "";
-          actionsHtml = banBtn + adminBtn;
-        }
-
-        tr.innerHTML = `
-          <td>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div class="avatar-wrap">
-                <div class="avatar" style="width:32px;height:32px;font-size:13px;"></div>
-                ${online ? '<span class="online-dot" style="width:9px;height:9px;"></span>' : ''}
-              </div>
-              <strong>${escapeHtml(user.displayName || "—")}</strong>
-            </div>
-          </td>
-          <td>${escapeHtml(user.email || "—")}</td>
-          <td><span class="role-badge ${roleClass}">${roleText}</span></td>
-          <td>${created}</td>
-          <td>${actionsHtml}</td>
-        `;
-        setAvatar(tr.querySelector(".avatar"), user.displayName, user.photoURL, user.role === "admin" || user.role === "owner");
-        tbody.appendChild(tr);
-      });
-    }
-
-    document.getElementById("adminSearchInput")?.addEventListener("input", renderAdmin);
-
-    // Các hàm admin (gắn vào window để onclick hoạt động)
-    // Lưu ý: đây là chốt chặn ở giao diện để tránh thao tác nhầm — bảo mật
-    // thật sự phải được thiết lập trong Firestore Security Rules (chỉ cho
-    // phép user có role owner/admin ghi vào collection "users").
-    window.banUser = async function(uid) {
-      if (!isAdmin()) return;
-      if (!confirm("Bạn chắc chắn muốn khóa tài khoản này?")) return;
-      await db.collection("users").doc(uid).update({ banned: true });
-      toast("Đã khóa tài khoản", "success");
-    };
-
-    window.unbanUser = async function(uid) {
-      if (!isAdmin()) return;
-      await db.collection("users").doc(uid).update({ banned: false });
-      toast("Đã mở khóa tài khoản", "success");
-    };
-
-    window.makeAdmin = async function(uid) {
-      if (!isOwner()) { toast("Chỉ Admin chính chủ mới được cấp quyền Admin", "error"); return; }
-      if (!confirm("Cấp quyền Admin cho người này?")) return;
-      await db.collection("users").doc(uid).update({ role: "admin" });
-      toast("Đã cấp quyền Admin", "success");
-    };
-
-    window.removeAdmin = async function(uid) {
-      if (!isOwner()) { toast("Chỉ Admin chính chủ mới được gỡ quyền Admin", "error"); return; }
-      if (!confirm("Gỡ quyền Admin của người này?")) return;
-      await db.collection("users").doc(uid).update({ role: "user" });
-      toast("Đã gỡ quyền Admin", "success");
-    };
-  </script>
+  }
+  tlNextTurn(room,gs);
+}
+window.tlPass=function(){
+  const room=getRoom(inRoom);
+  const gs=room.gameState;
+  if(!gs||gs.turnPlayer!==me.username)return;
+  gs.passCount=(gs.passCount||0)+1;
+  const activePlayers=room.players.filter(p=>!(gs.finished||[]).includes(p));
+  if(gs.passCount>=activePlayers.length-1){
+    // Everyone passed → clear pile, lastPlayBy starts fresh
+    gs.pile=[];gs.passCount=0;gs.lastPlayBy=null;
+    // Next after lastPlayBy or just next
+    tlNextTurn(room,gs);
+  } else {
+    tlNextTurn(room,gs);
+  }
+}
+function tlNextTurn(room,gs){
+  const active=room.players.filter(p=>!(gs.finished||[]).includes(p));
+  const cur=active.indexOf(gs.turnPlayer);
+  gs.turnPlayer=active[(cur+1)%active.length];
+  room.gameState=gs;updateRoom(inRoom,room);
+}
+function tlSettleCoins(room,gs,users){
+  const fin=gs.finished||[];
+  const total=room.players.length*room.bet;
+  // 1st gets all pot, others lose
+  const winner=fin[0];
+  if(winner)users[winner].coins+=total;
+  // losers already deducted at start
+  saveUsers(users);
+}
+
+// ======================================================
+// ADMIN
+// ======================================================
+let adminSelectedUser=null;
+function showAdmin(){
+  if(!me?.isAdmin){toast('Không có quyền');return}
+  document.getElementById('adminPanel').className='show';
+  renderAdminUsers();
+}
+function closeAdmin(){document.getElementById('adminPanel').className=''}
+function renderAdminUsers(){
+  const users=getUsers();
+  const el=document.getElementById('adminUserList');
+  el.innerHTML='';
+  Object.values(users).filter(u=>u.username!==ADMIN_USER).forEach(u=>{
+    const div=document.createElement('div');div.className='user-row';
+    div.innerHTML=`<span>${escHtml(u.displayName)} <small style="color:#9dbfa0">(${u.username})</small></span>
+      <span style="color:var(--gold);font-weight:700">🪙${u.coins}</span>`;
+    div.onclick=()=>{adminSelectedUser=u.username;div.style.borderLeft='3px solid var(--gold)';
+      setTimeout(()=>div.style.borderLeft='',2000);toast('Đã chọn: '+u.displayName)};
+    el.appendChild(div);
+  });
+}
+function giveCoinsSelected(){
+  if(!adminSelectedUser){toast('Chọn người chơi trước');return}
+  const amt=parseInt(document.getElementById('giveCoinsAmt').value)||0;
+  if(amt<=0){toast('Nhập số xu hợp lệ');return}
+  const users=getUsers();
+  if(!users[adminSelectedUser]){toast('Không tìm thấy user');return}
+  users[adminSelectedUser].coins+=amt;
+  saveUsers(users);
+  toast(`Đã cấp 🪙${amt} cho ${users[adminSelectedUser].displayName}`);
+  renderAdminUsers();
+  refreshMyCoin();
+}
+
+// ======================================================
+// CHAT
+// ======================================================
+let chatOpen=false;
+function toggleChat(){chatOpen=!chatOpen;document.getElementById('chatSidebar').classList.toggle('open',chatOpen)}
+function renderChat(room){
+  const el=document.getElementById('chatMsgs');
+  const msgs=room.chat||[];
+  el.innerHTML=msgs.slice(-40).map(m=>`<div class="chat-msg"><div class="cm-name">${escHtml(m.from)}</div>${escHtml(m.text)}</div>`).join('');
+  el.scrollTop=el.scrollHeight;
+}
+window.sendChat=function(){
+  const inp=document.getElementById('chatInp');
+  const text=inp.value.trim();if(!text)return;
+  const room=getRoom(inRoom);if(!room)return;
+  if(!room.chat)room.chat=[];
+  room.chat.push({from:me.displayName,text,t:Date.now()});
+  if(room.chat.length>60)room.chat=room.chat.slice(-60);
+  updateRoom(inRoom,room);inp.value='';
+}
+document.getElementById('chatInp').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});
+
+// ======================================================
+// MISC
+// ======================================================
+function toast(msg,dur=2500){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function closeResult(){document.getElementById('resultModal').className='modal'}
+
+// Keyboard shortcut
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeAdmin();closeResult()}
+});
+
+// Pulse CSS inject
+const style=document.createElement('style');
+style.textContent=`
+@keyframes pulse{0%{box-shadow:0 0 0 0 #f0c03066}70%{box-shadow:0 0 0 12px #f0c03000}100%{box-shadow:0 0 0 0 #f0c03000}}
+.active-turn{animation:pulse 1.5s infinite}
+.btn-icon{background:none;border:none;cursor:pointer;color:var(--text)}
+`;
+document.head.appendChild(style);
+
+// Welcome
+toast('Chào mừng! Tài khoản admin: admin / admin123');
+</script>
 </body>
 </html>
