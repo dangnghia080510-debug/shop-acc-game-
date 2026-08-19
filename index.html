@@ -286,6 +286,7 @@
       font-size: 11px; font-weight: 600;
     }
     .role-badge.admin { background: #fef3c7; color: #b45309; }
+    .role-badge.owner { background: #ede9fe; color: #6d28d9; }
     .role-badge.user { background: #e7f3ff; color: #0066cc; }
     .role-badge.banned { background: #ffebee; color: #c62828; }
 
@@ -597,28 +598,39 @@
 
   <script>
     // =====================================================
-    // 1. CẤU HÌNH FIREBASE - THAY BẰNG THÔNG TIN CỦA BẠN
+    // 1. CẤU HÌNH FIREBASE - BẮT BUỘC THAY BẰNG THÔNG TIN CỦA BẠN
+    // API key cũ trong bản trước đã KHÔNG CÒN HOẠT ĐỘNG (bị vô hiệu/xóa
+    // ở phía Firebase) nên mình đã gỡ bỏ hoàn toàn, không dùng lại.
+    // Cách lấy config MỚI của chính bạn:
+    //   1) Vào https://console.firebase.google.com → tạo dự án mới (miễn phí)
+    //   2) Vào biểu tượng bánh răng ⚙️ > Project settings > mục "Your apps"
+    //      → bấm biểu tượng Web "</>" để tạo Web App → Firebase sẽ đưa cho bạn
+    //      đúng 7 dòng bên dưới, copy dán đè vào đây.
+    //   3) Bật Authentication > Sign-in method: Email/Password, Google, Anonymous
+    //   4) Tạo Firestore Database + Storage (chế độ test hoặc rule cho phép user
+    //      đã đăng nhập đọc/ghi)
     // =====================================================
     const firebaseConfig = {
-      apiKey: "AIzaSyCyapf8zLqz31Jc7gMUweXrZk1ReP07dv0",
-      authDomain: "nhantin-4ee06.firebaseapp.com",
-      projectId: "nhantin-4ee06",
-      storageBucket: "nhantin-4ee06.firebasestorage.app",
-      messagingSenderId: "638909790258",
-      appId: "1:638909790258:web:7e6f1b3b702d10a66c6feb",
-      measurementId: "G-FNQ61VSPGN"
+      apiKey: "DÁN_API_KEY_CỦA_BẠN_VÀO_ĐÂY",
+      authDomain: "DÁN_AUTH_DOMAIN_CỦA_BẠN",
+      projectId: "DÁN_PROJECT_ID_CỦA_BẠN",
+      storageBucket: "DÁN_STORAGE_BUCKET_CỦA_BẠN",
+      messagingSenderId: "DÁN_SENDER_ID_CỦA_BẠN",
+      appId: "DÁN_APP_ID_CỦA_BẠN"
     };
 
     // =====================================================
-    // 2. EMAIL ADMIN
-    // Bất kỳ email nào trong danh sách này sẽ TỰ ĐỘNG thành Admin
-    // - khi đăng ký mới, HOẶC
-    // - ngay lần đăng nhập tiếp theo nếu tài khoản đã tồn tại từ trước
-    // => Muốn có quyền Admin: thêm email của bạn vào đây rồi đăng nhập lại.
+    // 2. QUYỀN ADMIN — KHÔNG còn email admin gắn cứng trong code nữa.
+    // Cơ chế mới: "Admin chính chủ" (owner) được cấp tự động cho NGƯỜI ĐẦU
+    // TIÊN đăng ký/đăng nhập trên hệ thống của bạn (dựa vào tài liệu
+    // meta/appMeta trong Firestore, dùng transaction nên chỉ 1 người duy
+    // nhất giành được, kể cả khi có nhiều người bấm cùng lúc).
+    // - Chỉ Admin chính chủ (owner) mới thấy nút "Cấp Admin / Gỡ Admin"
+    //   để tạo/gỡ các admin phụ.
+    // - Admin phụ chỉ có quyền khóa/mở khóa tài khoản, KHÔNG được cấp
+    //   quyền admin cho người khác.
+    // - Không ai (kể cả admin phụ) khóa được tài khoản admin chính chủ.
     // =====================================================
-    const ADMIN_EMAILS = [
-      "anhnghia8510@gmail.com"
-    ];
 
     // =====================================================
     // GHI CHÚ TRIỂN KHAI TRÊN GITHUB PAGES
@@ -701,14 +713,13 @@
         // Nếu chưa có hồ sơ (vd. tài khoản khách/ẩn danh chưa từng lưu) thì tạo mới
         if (!userProfile) {
           const guestName = "Khách#" + user.uid.slice(0, 5).toUpperCase();
-          const role = ADMIN_EMAILS.includes(user.email) ? "admin" : "user";
           userProfile = {
             uid: user.uid,
             email: user.email || "",
             displayName: user.displayName || (user.isAnonymous ? guestName : "Người dùng"),
             photoURL: user.photoURL || "",
             bio: "",
-            role,
+            role: "user",
             isGuest: !!user.isAnonymous,
             banned: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -725,11 +736,14 @@
           return;
         }
 
-        // Tự động cấp quyền Admin nếu email nằm trong ADMIN_EMAILS (kể cả tài khoản đã tạo trước đó)
-        if (ADMIN_EMAILS.includes(user.email) && userProfile.role !== "admin") {
-          await ref.update({ role: "admin" });
-          userProfile.role = "admin";
-          toast("Tài khoản của bạn đã được cấp quyền Admin", "success");
+        // Nếu hệ thống chưa có ai giữ quyền "Admin chính chủ", người đăng
+        // nhập/đăng ký này sẽ tự động trở thành Admin chính chủ (owner).
+        if (userProfile.role !== "owner" && !user.isAnonymous) {
+          const became = await claimOwnerIfNoneExists(user.uid);
+          if (became) {
+            userProfile.role = "owner";
+            toast("Bạn là người đầu tiên vào hệ thống → đã trở thành Admin chính chủ!", "success", 5000);
+          }
         }
 
         showApp();
@@ -760,7 +774,31 @@
 
     function isAdmin() {
       if (!userProfile) return false;
-      return userProfile.role === "admin" || ADMIN_EMAILS.includes(currentUser?.email);
+      return userProfile.role === "admin" || userProfile.role === "owner";
+    }
+
+    function isOwner() {
+      return userProfile?.role === "owner";
+    }
+
+    // Giành quyền "Admin chính chủ" cho người đầu tiên đăng ký/đăng nhập.
+    // Dùng transaction trên tài liệu meta/appMeta để đảm bảo chỉ 1 người
+    // duy nhất thắng, kể cả khi nhiều người cùng đăng ký gần như đồng thời.
+    async function claimOwnerIfNoneExists(uid) {
+      const metaRef = db.collection("meta").doc("appMeta");
+      let becameOwner = false;
+      try {
+        await db.runTransaction(async (tx) => {
+          const metaSnap = await tx.get(metaRef);
+          if (metaSnap.exists && metaSnap.data().ownerClaimed) return;
+          tx.set(metaRef, { ownerClaimed: true, ownerUid: uid, claimedAt: firebase.firestore.FieldValue.serverTimestamp() });
+          tx.update(db.collection("users").doc(uid), { role: "owner" });
+          becameOwner = true;
+        });
+      } catch (err) {
+        console.warn("Không thể kiểm tra quyền owner:", err);
+      }
+      return becameOwner;
     }
 
     function showLogin() {
@@ -839,16 +877,16 @@
         const cred = await auth.createUserWithEmailAndPassword(email, password);
         await cred.user.updateProfile({ displayName: name });
 
-        // Tự động gán role admin nếu email nằm trong danh sách
-        const role = ADMIN_EMAILS.includes(email) ? "admin" : "user";
-
+        // Vai trò mặc định là "user". Nếu đây là người đầu tiên vào hệ
+        // thống, quyền Admin chính chủ sẽ được tự động cấp ngay sau khi
+        // đăng nhập thành công (xử lý trong onAuthStateChanged).
         await db.collection("users").doc(cred.user.uid).set({
           uid: cred.user.uid,
           email,
           displayName: name,
           photoURL: "",
           bio: "",
-          role: role,
+          role: "user",
           banned: false,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           lastSeen: firebase.firestore.FieldValue.serverTimestamp()
@@ -877,14 +915,13 @@
         const ref = db.collection("users").doc(user.uid);
         const snap = await ref.get();
         if (!snap.exists) {
-          const role = ADMIN_EMAILS.includes(user.email) ? "admin" : "user";
           await ref.set({
             uid: user.uid,
             email: user.email,
             displayName: user.displayName || "Người dùng",
             photoURL: user.photoURL || "",
             bio: "",
-            role: role,
+            role: "user",
             banned: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastSeen: firebase.firestore.FieldValue.serverTimestamp()
@@ -927,7 +964,8 @@
       const photo = userProfile?.photoURL || currentUser.photoURL || "";
       document.getElementById("myName").textContent = name;
       let label = "Xem trang cá nhân";
-      if (isAdmin()) label = "Admin • Xem trang cá nhân";
+      if (isOwner()) label = "👑 Admin chính chủ • Xem trang cá nhân";
+      else if (isAdmin()) label = "Admin • Xem trang cá nhân";
       else if (userProfile?.isGuest) label = "Tài khoản khách • Xem trang cá nhân";
       document.getElementById("myRoleLabel").textContent = label;
       setAvatar(document.getElementById("myAvatar"), name, photo, isAdmin());
@@ -1366,10 +1404,31 @@
         let roleClass = "user";
         let roleText = user.isGuest ? "Khách" : "User";
         if (user.role === "admin") { roleClass = "admin"; roleText = "Admin"; }
+        if (user.role === "owner") { roleClass = "owner"; roleText = "👑 Chính chủ"; }
         if (user.banned) { roleClass = "banned"; roleText = "Đã khóa"; }
 
         const isMe = user.uid === currentUser.uid;
         const online = isOnline(user);
+        const targetIsOwner = user.role === "owner";
+
+        let actionsHtml;
+        if (isMe) {
+          actionsHtml = '<span style="color:#999;font-size:12px;">Bạn</span>';
+        } else if (targetIsOwner) {
+          // Không ai được khóa hoặc gỡ quyền của Admin chính chủ
+          actionsHtml = '<span style="color:#999;font-size:12px;">Admin chính chủ</span>';
+        } else {
+          const banBtn = user.banned
+            ? `<button class="btn-admin" onclick="unbanUser('${user.uid}')">Mở khóa</button>`
+            : `<button class="btn-danger" onclick="banUser('${user.uid}')">Khóa</button>`;
+          // Chỉ Admin chính chủ (owner) mới được cấp/gỡ quyền Admin phụ
+          const adminBtn = isOwner()
+            ? (user.role !== "admin"
+                ? `<button class="btn-admin" style="margin-left:4px;" onclick="makeAdmin('${user.uid}')">Cấp Admin</button>`
+                : `<button class="btn-danger" style="margin-left:4px;" onclick="removeAdmin('${user.uid}')">Gỡ Admin</button>`)
+            : "";
+          actionsHtml = banBtn + adminBtn;
+        }
 
         tr.innerHTML = `
           <td>
@@ -1384,20 +1443,9 @@
           <td>${escapeHtml(user.email || "—")}</td>
           <td><span class="role-badge ${roleClass}">${roleText}</span></td>
           <td>${created}</td>
-          <td>
-            ${isMe ? '<span style="color:#999;font-size:12px;">Bạn</span>' : `
-              ${user.banned
-                ? `<button class="btn-admin" onclick="unbanUser('${user.uid}')">Mở khóa</button>`
-                : `<button class="btn-danger" onclick="banUser('${user.uid}')">Khóa</button>`
-              }
-              ${user.role !== "admin"
-                ? `<button class="btn-admin" style="margin-left:4px;" onclick="makeAdmin('${user.uid}')">Cấp Admin</button>`
-                : `<button class="btn-danger" style="margin-left:4px;" onclick="removeAdmin('${user.uid}')">Gỡ Admin</button>`
-              }
-            `}
-          </td>
+          <td>${actionsHtml}</td>
         `;
-        setAvatar(tr.querySelector(".avatar"), user.displayName, user.photoURL, user.role === "admin");
+        setAvatar(tr.querySelector(".avatar"), user.displayName, user.photoURL, user.role === "admin" || user.role === "owner");
         tbody.appendChild(tr);
       });
     }
@@ -1405,24 +1453,31 @@
     document.getElementById("adminSearchInput")?.addEventListener("input", renderAdmin);
 
     // Các hàm admin (gắn vào window để onclick hoạt động)
+    // Lưu ý: đây là chốt chặn ở giao diện để tránh thao tác nhầm — bảo mật
+    // thật sự phải được thiết lập trong Firestore Security Rules (chỉ cho
+    // phép user có role owner/admin ghi vào collection "users").
     window.banUser = async function(uid) {
+      if (!isAdmin()) return;
       if (!confirm("Bạn chắc chắn muốn khóa tài khoản này?")) return;
       await db.collection("users").doc(uid).update({ banned: true });
       toast("Đã khóa tài khoản", "success");
     };
 
     window.unbanUser = async function(uid) {
+      if (!isAdmin()) return;
       await db.collection("users").doc(uid).update({ banned: false });
       toast("Đã mở khóa tài khoản", "success");
     };
 
     window.makeAdmin = async function(uid) {
+      if (!isOwner()) { toast("Chỉ Admin chính chủ mới được cấp quyền Admin", "error"); return; }
       if (!confirm("Cấp quyền Admin cho người này?")) return;
       await db.collection("users").doc(uid).update({ role: "admin" });
       toast("Đã cấp quyền Admin", "success");
     };
 
     window.removeAdmin = async function(uid) {
+      if (!isOwner()) { toast("Chỉ Admin chính chủ mới được gỡ quyền Admin", "error"); return; }
       if (!confirm("Gỡ quyền Admin của người này?")) return;
       await db.collection("users").doc(uid).update({ role: "user" });
       toast("Đã gỡ quyền Admin", "success");
