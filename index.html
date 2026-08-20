@@ -261,6 +261,10 @@ select.inp{appearance:none}
         <option value="baucua">🎲 Bầu Cua Tôm Cá — 1 đến 10 người</option>
         <option value="taixiu">🎲 Tài Xỉu — 1 đến 10 người</option>
         <option value="xocdia">🪙 Xóc Đĩa — 1 đến 10 người</option>
+        <option value="crash">✈️ Crash (Máy bay) — 1 đến 10 người</option>
+        <option value="dagaga">🐓 Đá Gà Ảo — 1 đến 10 người</option>
+        <option value="mines">💣 Mines (Dò mìn) — 1 đến 10 người</option>
+        <option value="duangua">🏇 Đua Ngựa / Chó Ảo — 1 đến 10 người</option>
       </select>
       <select class="inp" id="maxPlayers">
         <option value="1" selected>1 người</option>
@@ -403,11 +407,27 @@ const SFX={
   click(){playTone(600,0.06,'square',0.06)},
   bet(){playTone(440,0.08,'triangle',0.1);playTone(660,0.1,'triangle',0.08,0.06)},
   roll(){playTone(200,0.08,'sawtooth',0.08);playTone(180,0.08,'sawtooth',0.07,0.07);playTone(220,0.1,'sawtooth',0.07,0.14)},
-  win(){playTone(523,0.12,'sine',0.12);playTone(659,0.12,'sine',0.12,0.12);playTone(784,0.2,'sine',0.14,0.24)},
-  lose(){playTone(300,0.15,'triangle',0.1);playTone(200,0.22,'triangle',0.1,0.12)},
+  win(){playTone(523,0.12,'sine',0.12);playTone(659,0.12,'sine',0.12,0.12);playTone(784,0.2,'sine',0.14,0.24);playTone(1046,0.25,'sine',0.1,0.4)},
+  lose(){playTone(300,0.15,'triangle',0.1);playTone(200,0.22,'triangle',0.1,0.12);playTone(150,0.3,'sawtooth',0.08,0.2)},
   join(){playTone(500,0.08,'sine',0.1);playTone(700,0.1,'sine',0.1,0.08)},
-  start(){playTone(400,0.1,'square',0.08);playTone(600,0.12,'square',0.08,0.1);playTone(800,0.15,'square',0.1,0.22)}
+  start(){playTone(400,0.1,'square',0.08);playTone(600,0.12,'square',0.08,0.1);playTone(800,0.15,'square',0.1,0.22)},
+  cashout(){playTone(880,0.1,'sine',0.12);playTone(1100,0.15,'sine',0.1,0.1)},
+  explode(){playTone(80,0.4,'sawtooth',0.15);playTone(60,0.5,'square',0.1,0.1)},
+  tick(){playTone(900,0.04,'square',0.04)}
 };
+function speak(text){
+  if(!sfxOn)return;
+  try{
+    if(!window.speechSynthesis)return;
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='vi-VN';
+    u.rate=1.05;
+    u.pitch=1.1;
+    u.volume=0.85;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
 function toggleSfx(){
   sfxOn=!sfxOn;
   try{localStorage.setItem('gb_sfx',sfxOn?'1':'0')}catch(e){}
@@ -459,6 +479,57 @@ function updateRoom(id,room){
 function removeRoom(id){
   if(localRooms)delete localRooms[id];
   db.ref('rooms/'+id).remove().catch(err=>console.error('removeRoom',err));
+}
+
+// ===== SAFE CONCURRENT MONEY & BET HELPERS (fix spam race) =====
+function changeCoinsTx(username, delta){
+  // delta >0 add, <0 deduct. Returns Promise<boolean> success
+  return db.ref('users/'+username+'/coins').transaction(cur=>{
+    const c = Number(cur)||0;
+    const next = c + delta;
+    if(next < 0) return; // abort transaction
+    return next;
+  }).then(res=>{
+    if(res.committed){
+      // keep local cache roughly in sync
+      if(localUsers && localUsers[username]){
+        localUsers[username].coins = res.snapshot.val();
+      }
+      if(me && me.username===username){
+        me.coins = res.snapshot.val();
+        refreshMyCoin();
+      }
+      return true;
+    }
+    return false;
+  }).catch(err=>{console.error('changeCoinsTx',err);return false});
+}
+
+function setBetPath(roomId, username, gateId, amount){
+  // Set absolute bet amount for a gate (or add via transaction)
+  return db.ref('rooms/'+roomId+'/gameState/bets/'+username+'/'+gateId).transaction(cur=>{
+    return (Number(cur)||0) + amount;
+  }).then(res=>res.committed).catch(err=>{console.error('setBetPath',err);return false});
+}
+
+function clearMyBetsPath(roomId, username){
+  return db.ref('rooms/'+roomId+'/gameState/bets/'+username).remove().catch(e=>console.error(e));
+}
+
+// Helper: render public bets under a gate (everyone sees who bet how much)
+function renderPublicBetsHtml(gs, gateId){
+  if(!gs || !gs.bets) return '';
+  const users = getUsers();
+  let parts = [];
+  Object.keys(gs.bets).forEach(uname=>{
+    const amt = gs.bets[uname] && gs.bets[uname][gateId];
+    if(amt > 0){
+      const disp = (users[uname] && users[uname].displayName) || uname;
+      parts.push(`<span style="display:inline-block;background:#0d1f0f;border:1px solid #3a5a40;border-radius:8px;padding:1px 6px;margin:1px;font-size:10px;color:#9dbfa0">${escHtml(disp)}: <b style="color:var(--gold)">${fmtVnd(amt)}</b></span>`);
+    }
+  });
+  if(!parts.length) return '';
+  return `<div style="margin-top:4px;display:flex;flex-wrap:wrap;justify-content:center;gap:2px">${parts.join('')}</div>`;
 }
 
 function checkFirebaseReady(){
@@ -629,6 +700,10 @@ function gameTypeLabel(g){
   if(g==='baucua')return '🎲 Bầu Cua';
   if(g==='taixiu')return '🎲 Tài Xỉu';
   if(g==='xocdia')return '🪙 Xóc Đĩa';
+  if(g==='crash')return '✈️ Crash';
+  if(g==='dagaga')return '🐓 Đá Gà';
+  if(g==='mines')return '💣 Mines';
+  if(g==='duangua')return '🏇 Đua Ngựa';
   return g;
 }
 
@@ -802,6 +877,10 @@ function refreshRoom(){
   else if(room.gameType==='baucua')renderBauCua(room);
   else if(room.gameType==='taixiu')renderTaiXiu(room);
   else if(room.gameType==='xocdia')renderXocDia(room);
+  else if(room.gameType==='crash')renderCrash(room);
+  else if(room.gameType==='dagaga')renderDaGa(room);
+  else if(room.gameType==='mines')renderMines(room);
+  else if(room.gameType==='duangua')renderDuaNgua(room);
   renderChat(room);
 }
 
@@ -935,6 +1014,10 @@ function startGame(){
     if(room.gameType==='baucua'){startBauCua(room,users);SFX.start();return}
     if(room.gameType==='taixiu'){startTaiXiu(room,users);SFX.start();return}
     if(room.gameType==='xocdia'){startXocDia(room,users);SFX.start();return}
+    if(room.gameType==='crash'){startCrash(room,users);SFX.start();return}
+    if(room.gameType==='dagaga'){startDaGa(room,users);SFX.start();return}
+    if(room.gameType==='mines'){startMines(room,users);SFX.start();return}
+    if(room.gameType==='duangua'){startDuaNgua(room,users);SFX.start();return}
     toast('Loại game không hỗ trợ: '+(room.gameType||'?'));
   }catch(err){
     console.error('startGame',err);
@@ -1014,6 +1097,7 @@ function renderBauCua(room){
     html+=`<div class="bc-cell${disabled?' bc-disabled':''}${myAmt?' bc-has-bet':''}" ${disabled?'':`onclick="bcBet('${s.id}')"`}>
       <div class="bc-icon">${s.icon}</div><div class="bc-name">${s.name}</div>
       ${myAmt?`<div class="bc-mybet">${fmtVnd(myAmt)}</div>`:''}
+      ${renderPublicBetsHtml(gs,s.id)}
     </div>`;
   });
   html+=`</div>`;
@@ -1040,26 +1124,25 @@ window.bcSetChip=function(v){
   const room=getRoom(inRoom);
   if(room)renderBauCua(room);
 }
-window.bcBet=function(symbolId){
+window.bcBet=async function(symbolId){
   const room=getRoom(inRoom);
   if(!room||!canBetNow(room)){toast('Bạn đang xem — không đặt được');return}
   const gs=room.gameState;
   if(!gs||gs.phase!=='betting')return;
   const amt=bcChipValue;
-  const users=getUsers();
-  const myCoins=users[me.username]?.coins||0;
-  if(myCoins<amt){toast('Không đủ tiền!');return}
-  users[me.username].coins-=amt;
-  saveUsers(users);
+  // Safe concurrent deduct
+  const ok = await changeCoinsTx(me.username, -amt);
+  if(!ok){toast('Không đủ tiền hoặc đang xử lý!');return}
+  // Safe concurrent bet path update
+  await setBetPath(inRoom, me.username, symbolId, amt);
+  SFX.bet();
+  // Local optimistic update for snappy UI
   if(!gs.bets)gs.bets={};
   if(!gs.bets[me.username])gs.bets[me.username]={};
   gs.bets[me.username][symbolId]=(gs.bets[me.username][symbolId]||0)+amt;
-  room.gameState=gs;
-  updateRoom(inRoom,room);
-  SFX.bet();
   renderBauCua(room);
 }
-window.bcClearBets=function(){
+window.bcClearBets=async function(){
   const room=getRoom(inRoom);
   if(!room||!canBetNow(room))return;
   const gs=room.gameState;
@@ -1067,12 +1150,9 @@ window.bcClearBets=function(){
   const mine=gs.bets[me.username]||{};
   const total=Object.values(mine).reduce((a,b)=>a+b,0);
   if(total<=0)return;
-  const users=getUsers();
-  if(users[me.username])users[me.username].coins+=total;
-  saveUsers(users);
+  await changeCoinsTx(me.username, total);
+  await clearMyBetsPath(inRoom, me.username);
   gs.bets[me.username]={};
-  room.gameState=gs;
-  updateRoom(inRoom,room);
   SFX.click();
   renderBauCua(room);
 }
@@ -1122,7 +1202,7 @@ window.bcRoll=function(){
   updateRoom(inRoom,room);
   const myNet=results[me.username]?.net;
   setTimeout(()=>{
-    if(myNet>0)SFX.win();else if(myNet<0)SFX.lose();
+    if(myNet>0){SFX.win();speak('Thắng rồi!')}else if(myNet<0){SFX.lose();speak('Thua rồi')}
     const r2=getRoom(inRoom);
     if(!r2||r2.gameState?.phase!=='rolling')return;
     r2.gameState.phase='done';
@@ -1222,6 +1302,7 @@ function renderTaiXiu(room){
       <div class="bc-icon">${s.icon}</div><div class="bc-name">${s.name}</div>
       <div style="font-size:11px;color:#6a9a70">${s.desc}</div>
       ${myAmt?`<div class="bc-mybet">${fmtVnd(myAmt)}</div>`:''}
+      ${renderPublicBetsHtml(gs,s.id)}
     </div>`;
   });
   html+=`</div>`;
@@ -1247,25 +1328,22 @@ window.txSetChip=function(v){
   const room=getRoom(inRoom);
   if(room)renderTaiXiu(room);
 }
-window.txBet=function(gateId){
+window.txBet=async function(gateId){
   const room=getRoom(inRoom);
   if(!room||!canBetNow(room)){toast('Bạn đang xem — không đặt được');return}
   const gs=room.gameState;
   if(!gs||gs.phase!=='betting')return;
   const amt=txChipValue;
-  const users=getUsers();
-  if((users[me.username]?.coins||0)<amt){toast('Không đủ tiền!');return}
-  users[me.username].coins-=amt;
-  saveUsers(users);
+  const ok = await changeCoinsTx(me.username, -amt);
+  if(!ok){toast('Không đủ tiền hoặc đang xử lý!');return}
+  await setBetPath(inRoom, me.username, gateId, amt);
   if(!gs.bets)gs.bets={};
   if(!gs.bets[me.username])gs.bets[me.username]={};
   gs.bets[me.username][gateId]=(gs.bets[me.username][gateId]||0)+amt;
-  room.gameState=gs;
-  updateRoom(inRoom,room);
   SFX.bet();
   renderTaiXiu(room);
 }
-window.txClearBets=function(){
+window.txClearBets=async function(){
   const room=getRoom(inRoom);
   if(!room||!canBetNow(room))return;
   const gs=room.gameState;
@@ -1273,12 +1351,9 @@ window.txClearBets=function(){
   const mine=gs.bets[me.username]||{};
   const total=Object.values(mine).reduce((a,b)=>a+b,0);
   if(total<=0)return;
-  const users=getUsers();
-  if(users[me.username])users[me.username].coins+=total;
-  saveUsers(users);
+  await changeCoinsTx(me.username, total);
+  await clearMyBetsPath(inRoom, me.username);
   gs.bets[me.username]={};
-  room.gameState=gs;
-  updateRoom(inRoom,room);
   SFX.click();
   renderTaiXiu(room);
 }
@@ -1325,7 +1400,7 @@ window.txRoll=function(){
   updateRoom(inRoom,room);
   const myNetTx=results[me.username]?.net;
   setTimeout(()=>{
-    if(myNetTx>0)SFX.win();else if(myNetTx<0)SFX.lose();
+    if(myNetTx>0){SFX.win();speak('Thắng rồi!')}else if(myNetTx<0){SFX.lose();speak('Thua rồi')}
     const r2=getRoom(inRoom);
     if(!r2||!r2.gameState||r2.gameState.phase!=='rolling')return;
     // Giữ nguyên dice khi chuyển sang done
@@ -1419,6 +1494,7 @@ function renderXocDia(room){
       <div class="bc-icon" style="font-size:18px">${s.icon}</div><div class="bc-name">${s.name}</div>
       <div style="font-size:11px;color:#6a9a70">${s.desc} · x${s.odds-1}</div>
       ${myAmt?`<div class="bc-mybet">${fmtVnd(myAmt)}</div>`:''}
+      ${renderPublicBetsHtml(gs,s.id)}
     </div>`;
   });
   html+=`</div>`;
@@ -1444,25 +1520,22 @@ window.xdSetChip=function(v){
   const room=getRoom(inRoom);
   if(room)renderXocDia(room);
 }
-window.xdBet=function(gateId){
+window.xdBet=async function(gateId){
   const room=getRoom(inRoom);
   if(!room||!canBetNow(room)){toast('Bạn đang xem — không đặt được');return}
   const gs=room.gameState;
   if(!gs||gs.phase!=='betting')return;
   const amt=xdChipValue;
-  const users=getUsers();
-  if((users[me.username]?.coins||0)<amt){toast('Không đủ tiền!');return}
-  users[me.username].coins-=amt;
-  saveUsers(users);
+  const ok = await changeCoinsTx(me.username, -amt);
+  if(!ok){toast('Không đủ tiền hoặc đang xử lý!');return}
+  await setBetPath(inRoom, me.username, gateId, amt);
   if(!gs.bets)gs.bets={};
   if(!gs.bets[me.username])gs.bets[me.username]={};
   gs.bets[me.username][gateId]=(gs.bets[me.username][gateId]||0)+amt;
-  room.gameState=gs;
-  updateRoom(inRoom,room);
   SFX.bet();
   renderXocDia(room);
 }
-window.xdClearBets=function(){
+window.xdClearBets=async function(){
   const room=getRoom(inRoom);
   if(!room||!canBetNow(room))return;
   const gs=room.gameState;
@@ -1470,12 +1543,9 @@ window.xdClearBets=function(){
   const mine=gs.bets[me.username]||{};
   const total=Object.values(mine).reduce((a,b)=>a+b,0);
   if(total<=0)return;
-  const users=getUsers();
-  if(users[me.username])users[me.username].coins+=total;
-  saveUsers(users);
+  await changeCoinsTx(me.username, total);
+  await clearMyBetsPath(inRoom, me.username);
   gs.bets[me.username]={};
-  room.gameState=gs;
-  updateRoom(inRoom,room);
   SFX.click();
   renderXocDia(room);
 }
@@ -1520,13 +1590,485 @@ window.xdShake=function(){
   room.gameState=gs;updateRoom(inRoom,room);
   const myNetXd=results[me.username]?.net;
   setTimeout(()=>{
-    if(myNetXd>0)SFX.win();else if(myNetXd<0)SFX.lose();
+    if(myNetXd>0){SFX.win();speak('Thắng rồi!')}else if(myNetXd<0){SFX.lose();speak('Thua rồi')}
     const r2=getRoom(inRoom);
     if(!r2||r2.gameState?.phase!=='rolling')return;
     r2.gameState.phase='done';
     updateRoom(inRoom,r2);
   },1800);
 }
+
+// ======================================================
+// CRASH (AVIATOR)
+// ======================================================
+let crashChipValue=1000;
+let crashAnimTimer=null;
+function startCrash(room,users){
+  if(crashAnimTimer){clearInterval(crashAnimTimer);crashAnimTimer=null}
+  room.status='playing';
+  room.gameState={phase:'betting',bets:{},multiplier:1,crashAt:null,results:{},cashed:{}};
+  updateRoom(inRoom,room);
+}
+function renderCrash(room){
+  const gs=room.gameState||{};
+  const gc=document.getElementById('gameContent');
+  const isHost=room.host===me.username;
+  const myBet=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  const myCashed=gs.cashed&&gs.cashed[me.username];
+  let html=`<div class="tl-table"><div class="center-area">
+    <div class="pname" style="margin-bottom:8px">✈️ Crash — Máy bay tăng hệ số</div>
+    <div style="font-size:48px;font-weight:900;color:var(--gold);min-height:60px" id="crashMulDisp">${gs.phase==='flying'||gs.phase==='done'?(gs.multiplier||1).toFixed(2)+'x':'1.00x'}</div>
+    <div style="font-size:13px;color:#9dbfa0;margin-top:4px">${gs.phase==='betting'?'Đặt cược rồi chờ cất cánh':gs.phase==='flying'?'Đang bay... bấm RÚT trước khi nổ!':gs.phase==='done'?('Nổ tại '+(gs.crashAt||0).toFixed(2)+'x'):''}</div>
+  </div>`;
+  html+=renderPlayersRingHtml(room,gs);
+  html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược':gs.phase==='flying'?'✈️ Đang bay — Rút ngay!':'✅ Ván kết thúc'}</div></div>`;
+  html+=`<div class="center-area"><div class="pname" style="margin-bottom:10px">Chọn mức cược</div><div class="bet-row">`;
+  CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${crashChipValue===v?' chip-selected':''}" onclick="crashSetChip(${v})">${chipLabel(v)}</div>`});
+  html+=`</div>`;
+  if(myBet)html+=`<div style="margin:8px 0;font-size:14px;color:var(--gold)">Cược của bạn: ${fmtVnd(myBet)}${myCashed?` → Đã rút @ ${myCashed.at.toFixed(2)}x (+${fmtVnd(myCashed.win)})`:''}</div>`;
+  html+=renderPublicBetsHtml(gs,'main');
+  if(gs.phase==='betting'){
+    html+=`<div class="action-row">
+      <button class="btn btn-gray" onclick="crashClearBet()">↺ Hủy cược</button>
+      <button class="btn btn-gold" onclick="crashPlaceBet()">Đặt cược ${chipLabel(crashChipValue)}</button>
+      ${isHost?`<button class="btn btn-green" onclick="crashStartFly()">🚀 Cất cánh</button>`:''}
+    </div>`;
+  } else if(gs.phase==='flying' && myBet && !myCashed){
+    html+=`<div class="action-row"><button class="btn btn-gold" style="font-size:18px;padding:14px 28px" onclick="crashCashout()">💰 RÚT TIỀN</button></div>`;
+  } else if(gs.phase==='done'&&isHost){
+    html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  }
+  html+=`</div></div>`;
+  gc.innerHTML=html;
+}
+window.crashSetChip=function(v){if(!canBetNow(getRoom(inRoom)))return;crashChipValue=v;SFX.click();const r=getRoom(inRoom);if(r)renderCrash(r)};
+window.crashPlaceBet=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  if(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main){toast('Đã đặt cược rồi');return}
+  const amt=crashChipValue;
+  const ok=await changeCoinsTx(me.username,-amt);if(!ok){toast('Không đủ tiền!');return}
+  await setBetPath(inRoom,me.username,'main',amt);
+  if(!gs.bets)gs.bets={};if(!gs.bets[me.username])gs.bets[me.username]={};
+  gs.bets[me.username].main=amt;
+  SFX.bet();renderCrash(room);
+};
+window.crashClearBet=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  const amt=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  if(amt<=0)return;
+  await changeCoinsTx(me.username,amt);
+  await clearMyBetsPath(inRoom,me.username);
+  if(gs.bets)gs.bets[me.username]={};
+  SFX.click();renderCrash(room);
+};
+window.crashStartFly=function(){
+  const room=getRoom(inRoom);if(!room||room.host!==me.username)return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  // Random crash point (house edge ~3%)
+  const r=Math.random();
+  const crashAt = r<0.03 ? 1.00 : Math.max(1.01, Math.floor((0.97/(1-r))*100)/100);
+  gs.crashAt=crashAt;gs.multiplier=1;gs.phase='flying';gs.cashed=gs.cashed||{};
+  room.gameState=gs;updateRoom(inRoom,room);
+  SFX.start();speak('Máy bay cất cánh');
+  // Local animation for host, others follow via listener
+  if(crashAnimTimer)clearInterval(crashAnimTimer);
+  let mul=1;
+  crashAnimTimer=setInterval(()=>{
+    mul = Math.min(crashAt, +(mul + 0.01 + mul*0.012).toFixed(2));
+    gs.multiplier=mul;
+    // optimistic local update for host
+    const disp=document.getElementById('crashMulDisp');
+    if(disp)disp.textContent=mul.toFixed(2)+'x';
+    if(mul>=crashAt){
+      clearInterval(crashAnimTimer);crashAnimTimer=null;
+      SFX.explode();speak('Nổ rồi!');
+      // settle
+      const users=getUsers();
+      const results={};
+      Object.keys(gs.bets||{}).forEach(p=>{
+        const staked=(gs.bets[p]&&gs.bets[p].main)||0;
+        const c=gs.cashed&&gs.cashed[p];
+        let net=-staked;
+        if(c){net=c.win-staked;if(users[p])users[p].coins=(users[p].coins||0)+c.win}
+        results[p]={net};
+      });
+      // host bank roughly
+      saveUsers(users);
+      gs.results=results;gs.phase='done';gs.multiplier=crashAt;
+      room.gameState=gs;updateRoom(inRoom,room);
+    } else {
+      // push multiplier occasionally so others see it rise
+      if(Math.random()<0.25) updateRoom(inRoom,room);
+    }
+  },120);
+};
+window.crashCashout=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='flying')return;
+  if(gs.cashed&&gs.cashed[me.username])return;
+  const staked=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  if(staked<=0)return;
+  const at=gs.multiplier||1;
+  const win=Math.floor(staked*at);
+  // record cashout
+  if(!gs.cashed)gs.cashed={};
+  gs.cashed[me.username]={at,win};
+  // give money immediately via tx
+  await changeCoinsTx(me.username, win);
+  room.gameState=gs;updateRoom(inRoom,room);
+  SFX.cashout();speak('Rút thành công '+at.toFixed(2)+' lần');
+  renderCrash(room);
+};
+
+// ======================================================
+// ĐÁ GÀ ẢO
+// ======================================================
+let dagaChipValue=1000;
+function startDaGa(room,users){
+  room.status='playing';
+  room.gameState={phase:'betting',bets:{},winner:null,results:{}};
+  updateRoom(inRoom,room);
+}
+function renderDaGa(room){
+  const gs=room.gameState||{};
+  const gc=document.getElementById('gameContent');
+  const isHost=room.host===me.username;
+  const myBets=(gs.bets&&gs.bets[me.username])||{};
+  let html=`<div class="tl-table"><div class="center-area">
+    <div class="pname" style="margin-bottom:10px">🐓 Đá Gà Ảo</div>
+    <div class="bc-dice-row">
+      <div class="bc-dice" style="font-size:40px">${gs.phase==='fighting'?'⚔️':gs.phase==='done'?(gs.winner==='do'?'🔴':'🟢'):'🐓'}</div>
+      <div style="font-size:22px;color:var(--gold);align-self:center">VS</div>
+      <div class="bc-dice" style="font-size:40px">${gs.phase==='fighting'?'⚔️':gs.phase==='done'?(gs.winner==='xanh'?'🟢':'🔴'):'🐓'}</div>
+    </div>
+    <div style="margin-top:8px;font-size:15px;font-weight:700;color:var(--gold)">${gs.phase==='done'?(gs.winner==='do'?'🔴 Gà Đỏ thắng!':gs.winner==='xanh'?'🟢 Gà Xanh thắng!':'🤝 Hòa'):gs.phase==='fighting'?'Đang đá...':'Chọn cửa đặt cược'}</div>
+  </div>`;
+  html+=renderPlayersRingHtml(room,gs);
+  html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược':gs.phase==='fighting'?'⚔️ Đang đá gà...':'✅ Kết thúc'}</div></div>`;
+  html+=`<div class="center-area"><div class="bet-row">`;
+  CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${dagaChipValue===v?' chip-selected':''}" onclick="dagaSetChip(${v})">${chipLabel(v)}</div>`});
+  html+=`</div><div class="bc-board" style="grid-template-columns:repeat(3,1fr);max-width:420px">`;
+  const gates=[{id:'do',icon:'🔴',name:'Gà Đỏ'},{id:'xanh',icon:'🟢',name:'Gà Xanh'},{id:'hoa',icon:'🤝',name:'Hòa'}];
+  gates.forEach(s=>{
+    const myAmt=myBets[s.id]||0;
+    const disabled=gs.phase!=='betting';
+    html+=`<div class="bc-cell${disabled?' bc-disabled':''}${myAmt?' bc-has-bet':''}" ${disabled?'':`onclick="dagaBet('${s.id}')"`}>
+      <div class="bc-icon">${s.icon}</div><div class="bc-name">${s.name}</div>
+      ${myAmt?`<div class="bc-mybet">${fmtVnd(myAmt)}</div>`:''}
+      ${renderPublicBetsHtml(gs,s.id)}
+    </div>`;
+  });
+  html+=`</div>`;
+  if(gs.phase==='betting'){
+    html+=`<div class="action-row"><button class="btn btn-gray" onclick="dagaClear()">↺ Hủy cược</button>
+      ${isHost?`<button class="btn btn-gold" onclick="dagaFight()">⚔️ Bắt đầu đá</button>`:''}</div>`;
+  } else if(gs.phase==='done'&&isHost){
+    html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  }
+  html+=`</div></div>`;
+  gc.innerHTML=html;
+}
+window.dagaSetChip=function(v){if(!canBetNow(getRoom(inRoom)))return;dagaChipValue=v;SFX.click();const r=getRoom(inRoom);if(r)renderDaGa(r)};
+window.dagaBet=async function(gid){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  const amt=dagaChipValue;
+  const ok=await changeCoinsTx(me.username,-amt);if(!ok){toast('Không đủ tiền!');return}
+  await setBetPath(inRoom,me.username,gid,amt);
+  if(!gs.bets)gs.bets={};if(!gs.bets[me.username])gs.bets[me.username]={};
+  gs.bets[me.username][gid]=(gs.bets[me.username][gid]||0)+amt;
+  SFX.bet();renderDaGa(room);
+};
+window.dagaClear=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  const mine=gs.bets[me.username]||{};const total=Object.values(mine).reduce((a,b)=>a+b,0);
+  if(total<=0)return;
+  await changeCoinsTx(me.username,total);await clearMyBetsPath(inRoom,me.username);
+  gs.bets[me.username]={};SFX.click();renderDaGa(room);
+};
+window.dagaFight=function(){
+  const room=getRoom(inRoom);if(!room||room.host!==me.username)return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  SFX.roll();speak('Bắt đầu đá gà');
+  gs.phase='fighting';room.gameState=gs;updateRoom(inRoom,room);
+  setTimeout(()=>{
+    const r=Math.random();
+    // 46% đỏ, 46% xanh, 8% hòa
+    const winner=r<0.46?'do':r<0.92?'xanh':'hoa';
+    const odds={do:2,xanh:2,hoa:8};
+    const users=getUsers();const results={};let hostDelta=0;const hostUser=room.host;
+    room.players.forEach(p=>{
+      const mine=gs.bets[p]||{};let staked=0,returned=0;
+      Object.keys(mine).forEach(g=>{const amt=mine[g];staked+=amt;if(g===winner)returned+=amt*odds[g]});
+      const net=returned-staked;results[p]={net};
+      if(users[p]&&returned>0)users[p].coins=(users[p].coins||0)+returned;
+      if(p!==hostUser)hostDelta-=net;
+    });
+    if(users[hostUser])users[hostUser].coins=Math.max(0,(users[hostUser].coins||0)+hostDelta);
+    saveUsers(users);
+    gs.winner=winner;gs.results=results;gs.phase='done';
+    room.gameState=gs;updateRoom(inRoom,room);
+    const myNet=results[me.username]?.net||0;
+    if(myNet>0){SFX.win();speak('Thắng rồi!')}else if(myNet<0){SFX.lose();speak('Thua rồi')}
+  },2200);
+};
+
+// ======================================================
+// MINES (DÒ MÌN)
+// ======================================================
+let minesChipValue=1000;
+let minesCount=3;
+function startMines(room,users){
+  room.status='playing';
+  room.gameState={phase:'betting',bets:{},grid:null,revealed:[],minePos:[],multiplier:1,results:{},alive:true};
+  updateRoom(inRoom,room);
+}
+function renderMines(room){
+  const gs=room.gameState||{};
+  const gc=document.getElementById('gameContent');
+  const isHost=room.host===me.username;
+  const myBet=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  let html=`<div class="tl-table"><div class="center-area">
+    <div class="pname">💣 Mines — Dò mìn</div>
+    <div style="font-size:14px;color:#9dbfa0;margin:6px 0">Hệ số hiện tại: <b style="color:var(--gold)">${(gs.multiplier||1).toFixed(2)}x</b> · Mìn: ${minesCount}</div>
+  </div>`;
+  html+=renderPlayersRingHtml(room,gs);
+  html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược rồi bắt đầu':gs.phase==='playing'?'Chọn ô an toàn — càng nhiều càng lời':'✅ Kết thúc'}</div></div>`;
+  html+=`<div class="center-area"><div class="bet-row">`;
+  CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${minesChipValue===v?' chip-selected':''}" onclick="minesSetChip(${v})">${chipLabel(v)}</div>`});
+  html+=`</div>`;
+  if(myBet)html+=`<div style="margin:6px 0;color:var(--gold)">Cược: ${fmtVnd(myBet)}</div>`;
+  html+=renderPublicBetsHtml(gs,'main');
+  // Grid 5x5
+  if(gs.phase==='playing'||gs.phase==='done'){
+    html+=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:280px;margin:12px auto">`;
+    for(let i=0;i<25;i++){
+      const rev=gs.revealed&&gs.revealed.includes(i);
+      const isMine=gs.minePos&&gs.minePos.includes(i);
+      let content='?',cls='';
+      if(gs.phase==='done'||rev){
+        if(isMine){content='💣';cls='style="background:#c0392b"'}
+        else {content='💎';cls='style="background:#27a85f"'}
+      }
+      const canClick=gs.phase==='playing'&&!rev&&gs.alive!==false&&myBet>0;
+      html+=`<div onclick="${canClick?`minesReveal(${i})`:''}" ${cls} style="width:48px;height:48px;border-radius:8px;background:#0d1f0f;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:${canClick?'pointer':'default'}">${content}</div>`;
+    }
+    html+=`</div>`;
+  }
+  if(gs.phase==='betting'){
+    html+=`<div class="action-row"><button class="btn btn-gray" onclick="minesClear()">↺ Hủy</button>
+      <button class="btn btn-gold" onclick="minesPlace()">Đặt ${chipLabel(minesChipValue)}</button>
+      ${isHost?`<button class="btn btn-green" onclick="minesStart()">▶ Bắt đầu</button>`:''}</div>`;
+  } else if(gs.phase==='playing'&&myBet&&gs.alive!==false){
+    html+=`<div class="action-row"><button class="btn btn-gold" onclick="minesCashout()">💰 Rút ${(myBet*(gs.multiplier||1)|0).toLocaleString('vi-VN')}đ</button></div>`;
+  } else if(gs.phase==='done'&&isHost){
+    html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  }
+  html+=`</div></div>`;
+  gc.innerHTML=html;
+}
+window.minesSetChip=function(v){if(!canBetNow(getRoom(inRoom)))return;minesChipValue=v;SFX.click();const r=getRoom(inRoom);if(r)renderMines(r)};
+window.minesPlace=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  if(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main){toast('Đã đặt');return}
+  const amt=minesChipValue;
+  const ok=await changeCoinsTx(me.username,-amt);if(!ok){toast('Không đủ tiền!');return}
+  await setBetPath(inRoom,me.username,'main',amt);
+  if(!gs.bets)gs.bets={};if(!gs.bets[me.username])gs.bets[me.username]={};
+  gs.bets[me.username].main=amt;SFX.bet();renderMines(room);
+};
+window.minesClear=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  const amt=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  if(amt<=0)return;
+  await changeCoinsTx(me.username,amt);await clearMyBetsPath(inRoom,me.username);
+  if(gs.bets)gs.bets[me.username]={};SFX.click();renderMines(room);
+};
+window.minesStart=function(){
+  const room=getRoom(inRoom);if(!room||room.host!==me.username)return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  // place mines
+  const pos=[];while(pos.length<minesCount){const p=Math.floor(Math.random()*25);if(!pos.includes(p))pos.push(p)}
+  gs.minePos=pos;gs.revealed=[];gs.multiplier=1;gs.alive=true;gs.phase='playing';
+  room.gameState=gs;updateRoom(inRoom,room);SFX.start();speak('Bắt đầu dò mìn');
+};
+window.minesReveal=function(idx){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='playing'||gs.alive===false)return;
+  if(gs.revealed&&gs.revealed.includes(idx))return;
+  if(!gs.revealed)gs.revealed=[];
+  gs.revealed.push(idx);
+  if(gs.minePos.includes(idx)){
+    gs.alive=false;gs.phase='done';
+    const staked=(gs.bets[me.username]&&gs.bets[me.username].main)||0;
+    gs.results={[me.username]:{net:-staked}};
+    SFX.explode();speak('Trúng mìn!');
+    room.gameState=gs;updateRoom(inRoom,room);
+  } else {
+    // increase multiplier roughly
+    const safe=25-minesCount;const opened=gs.revealed.filter(i=>!gs.minePos.includes(i)).length;
+    gs.multiplier=+(1 + opened*0.35).toFixed(2);
+    SFX.tick();
+    room.gameState=gs;updateRoom(inRoom,room);
+  }
+  renderMines(room);
+};
+window.minesCashout=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='playing'||gs.alive===false)return;
+  const staked=(gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  if(staked<=0)return;
+  const win=Math.floor(staked*(gs.multiplier||1));
+  await changeCoinsTx(me.username,win);
+  gs.results={[me.username]:{net:win-staked}};
+  gs.phase='done';gs.alive=false;
+  room.gameState=gs;updateRoom(inRoom,room);
+  SFX.win();speak('Rút thành công');
+  renderMines(room);
+};
+
+// ======================================================
+// ĐUA NGỰ / CHÓ ẢO
+// ======================================================
+let duaChipValue=1000;
+const DUA_RACERS=[
+  {id:'n1',icon:'🐴',name:'Ngựa 1',odds:3.2},
+  {id:'n2',icon:'🦄',name:'Ngựa 2',odds:4.5},
+  {id:'n3',icon:'🐕',name:'Chó 1',odds:2.8},
+  {id:'n4',icon:'🐺',name:'Chó 2',odds:5.0},
+  {id:'n5',icon:'🐯',name:'Hổ',odds:6.5},
+  {id:'n6',icon:'🐉',name:'Rồng',odds:8.0}
+];
+function startDuaNgua(room,users){
+  room.status='playing';
+  room.gameState={phase:'betting',bets:{},winner:null,results:{},progress:{}};
+  updateRoom(inRoom,room);
+}
+function renderDuaNgua(room){
+  const gs=room.gameState||{};
+  const gc=document.getElementById('gameContent');
+  const isHost=room.host===me.username;
+  const myBets=(gs.bets&&gs.bets[me.username])||{};
+  let html=`<div class="tl-table"><div class="center-area">
+    <div class="pname" style="margin-bottom:10px">🏇 Đua Ngựa / Chó Ảo</div>`;
+  if(gs.phase==='racing'||gs.phase==='done'){
+    DUA_RACERS.forEach(r=>{
+      const pct=gs.progress&&gs.progress[r.id]?gs.progress[r.id]:0;
+      const winMark=gs.winner===r.id?' 🏆':'';
+      html+=`<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+        <span style="width:70px;font-size:13px">${r.icon} ${r.name}</span>
+        <div style="flex:1;background:#0d1f0f;border-radius:8px;height:18px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--green2),var(--gold));transition:width .15s"></div>
+        </div>${winMark}
+      </div>`;
+    });
+  }
+  if(gs.phase==='done'&&gs.winner){
+    const w=DUA_RACERS.find(x=>x.id===gs.winner);
+    html+=`<div style="margin-top:8px;font-size:16px;font-weight:700;color:var(--gold)">${w?w.icon+' '+w.name+' thắng!':''}</div>`;
+  }
+  html+=`</div>`;
+  html+=renderPlayersRingHtml(room,gs);
+  html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược vào vận động viên':gs.phase==='racing'?'🏃 Đang đua...':'✅ Kết thúc'}</div></div>`;
+  html+=`<div class="center-area"><div class="bet-row">`;
+  CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${duaChipValue===v?' chip-selected':''}" onclick="duaSetChip(${v})">${chipLabel(v)}</div>`});
+  html+=`</div><div class="bc-board" style="grid-template-columns:repeat(3,1fr)">`;
+  DUA_RACERS.forEach(s=>{
+    const myAmt=myBets[s.id]||0;
+    const disabled=gs.phase!=='betting';
+    html+=`<div class="bc-cell${disabled?' bc-disabled':''}${myAmt?' bc-has-bet':''}" ${disabled?'':`onclick="duaBet('${s.id}')"`}>
+      <div class="bc-icon">${s.icon}</div><div class="bc-name">${s.name}</div>
+      <div style="font-size:11px;color:#6a9a70">x${s.odds}</div>
+      ${myAmt?`<div class="bc-mybet">${fmtVnd(myAmt)}</div>`:''}
+      ${renderPublicBetsHtml(gs,s.id)}
+    </div>`;
+  });
+  html+=`</div>`;
+  if(gs.phase==='betting'){
+    html+=`<div class="action-row"><button class="btn btn-gray" onclick="duaClear()">↺ Hủy</button>
+      ${isHost?`<button class="btn btn-gold" onclick="duaStartRace()">🏁 Bắt đầu đua</button>`:''}</div>`;
+  } else if(gs.phase==='done'&&isHost){
+    html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  }
+  html+=`</div></div>`;
+  gc.innerHTML=html;
+}
+window.duaSetChip=function(v){if(!canBetNow(getRoom(inRoom)))return;duaChipValue=v;SFX.click();const r=getRoom(inRoom);if(r)renderDuaNgua(r)};
+window.duaBet=async function(gid){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  const amt=duaChipValue;
+  const ok=await changeCoinsTx(me.username,-amt);if(!ok){toast('Không đủ tiền!');return}
+  await setBetPath(inRoom,me.username,gid,amt);
+  if(!gs.bets)gs.bets={};if(!gs.bets[me.username])gs.bets[me.username]={};
+  gs.bets[me.username][gid]=(gs.bets[me.username][gid]||0)+amt;
+  SFX.bet();renderDuaNgua(room);
+};
+window.duaClear=async function(){
+  const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  const mine=gs.bets[me.username]||{};const total=Object.values(mine).reduce((a,b)=>a+b,0);
+  if(total<=0)return;
+  await changeCoinsTx(me.username,total);await clearMyBetsPath(inRoom,me.username);
+  gs.bets[me.username]={};SFX.click();renderDuaNgua(room);
+};
+window.duaStartRace=function(){
+  const room=getRoom(inRoom);if(!room||room.host!==me.username)return;
+  const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  SFX.start();speak('Cuộc đua bắt đầu');
+  gs.phase='racing';gs.progress={};DUA_RACERS.forEach(r=>gs.progress[r.id]=0);
+  room.gameState=gs;updateRoom(inRoom,room);
+  // Simulate race
+  let steps=0;
+  const raceTimer=setInterval(()=>{
+    steps++;
+    DUA_RACERS.forEach(r=>{
+      gs.progress[r.id]=Math.min(100,(gs.progress[r.id]||0)+Math.random()*8+2);
+    });
+    if(steps%3===0) updateRoom(inRoom,room); // sync sometimes
+    // check winner
+    const finished=DUA_RACERS.filter(r=>(gs.progress[r.id]||0)>=100);
+    if(finished.length||steps>40){
+      clearInterval(raceTimer);
+      // pick winner weighted by odds (lower odds = higher chance)
+      let winner;
+      if(finished.length){
+        winner=finished.sort((a,b)=>(gs.progress[b.id]||0)-(gs.progress[a.id]||0))[0].id;
+      } else {
+        // weighted random
+        const weights=DUA_RACERS.map(r=>1/r.odds);
+        const sum=weights.reduce((a,b)=>a+b,0);
+        let rnd=Math.random()*sum;
+        for(let i=0;i<DUA_RACERS.length;i++){rnd-=weights[i];if(rnd<=0){winner=DUA_RACERS[i].id;break}}
+        if(!winner)winner=DUA_RACERS[0].id;
+        gs.progress[winner]=100;
+      }
+      const wObj=DUA_RACERS.find(x=>x.id===winner);
+      const users=getUsers();const results={};let hostDelta=0;const hostUser=room.host;
+      room.players.forEach(p=>{
+        const mine=gs.bets[p]||{};let staked=0,returned=0;
+        Object.keys(mine).forEach(g=>{
+          const amt=mine[g];staked+=amt;
+          if(g===winner)returned+=Math.floor(amt*(wObj?wObj.odds:2));
+        });
+        const net=returned-staked;results[p]={net};
+        if(users[p]&&returned>0)users[p].coins=(users[p].coins||0)+returned;
+        if(p!==hostUser)hostDelta-=net;
+      });
+      if(users[hostUser])users[hostUser].coins=Math.max(0,(users[hostUser].coins||0)+hostDelta);
+      saveUsers(users);
+      gs.winner=winner;gs.results=results;gs.phase='done';
+      room.gameState=gs;updateRoom(inRoom,room);
+      const myNet=results[me.username]?.net||0;
+      if(myNet>0){SFX.win();speak('Thắng lớn!')}else if(myNet<0){SFX.lose();speak('Thua cuộc')}
+    }
+  },200);
+};
 
 // ======================================================
 // ADMIN
