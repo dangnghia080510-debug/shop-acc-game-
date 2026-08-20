@@ -49,6 +49,20 @@ select.inp{appearance:none}
 .toast{position:fixed;top:20px;right:20px;background:#1a3d1a;border:1px solid var(--gold);border-radius:10px;padding:12px 20px;z-index:9999;font-size:14px;color:var(--gold);transform:translateX(140%);transition:.3s;max-width:280px}
 .toast.show{transform:none}
 
+/* ===== FX ===== */
+#fxLayer{pointer-events:none;position:fixed;inset:0;z-index:9998;overflow:hidden}
+.fx-particle{position:absolute;font-size:18px;animation:fxFly 1.2s ease-out forwards;opacity:0}
+@keyframes fxFly{0%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3) rotate(var(--rot))}}
+.fx-flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9997;animation:fxFlash .35s ease}
+@keyframes fxFlash{0%{opacity:.35}100%{opacity:0}}
+.fx-shake{animation:fxShake .45s ease}
+@keyframes fxShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.tour-badge{display:inline-block;background:linear-gradient(135deg,#f0c030,#e67e22);color:#1a0a00;font-size:11px;font-weight:900;padding:3px 10px;border-radius:8px;margin-left:6px}
+.tour-standings{background:#0d1f0f66;border:1px solid var(--gold);border-radius:12px;padding:12px;margin:10px auto;max-width:360px;width:100%}
+.tour-standings h4{color:var(--gold);text-align:center;margin-bottom:8px;font-size:14px}
+.tour-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #2a3d2c}
+.tour-row:last-child{border:none}
+
 /* ===== ADMIN PANEL ===== */
 #adminPanel{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000a;z-index:500;align-items:center;justify-content:center}
 #adminPanel.show{display:flex}
@@ -217,6 +231,7 @@ select.inp{appearance:none}
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+<div id="fxLayer"></div>
 
 <!-- LOBBY -->
 <div id="lobby">
@@ -245,6 +260,15 @@ select.inp{appearance:none}
       <button class="btn btn-gold" onclick="showCreate()">➕ Tạo phòng mới</button>
       <button class="btn btn-green" onclick="showJoin()">🔑 Vào phòng bằng ID</button>
       <button class="btn btn-gray" onclick="showRoomBrowser()">📋 Danh sách phòng</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <button class="btn btn-sm btn-gray" onclick="showLeaderboard()" style="margin:0">🏆 Xếp hạng</button>
+        <button class="btn btn-sm btn-gray" onclick="claimDaily()" style="margin:0">🎁 Điểm danh</button>
+        <button class="btn btn-sm btn-gray" onclick="showProfile()" style="margin:0">👤 Hồ sơ</button>
+        <button class="btn btn-sm btn-gray" onclick="showHistory()" style="margin:0">📜 Lịch sử</button>
+        <button class="btn btn-sm btn-gray" onclick="showFriends()" style="margin:0">👥 Bạn bè</button>
+        <button class="btn btn-sm btn-gray" onclick="showAchievements()" style="margin:0">🏅 Thành tựu</button>
+        <button class="btn btn-sm btn-gold" onclick="showCreateTour()" style="margin:0;grid-column:1/-1">🏆 Tạo giải đấu (Tournament)</button>
+      </div>
       <div id="adminMenuBtn" style="display:none;margin-top:10px">
         <button class="btn btn-sm btn-red" onclick="showAdmin()">⚙️ Quản trị Admin</button>
       </div>
@@ -261,6 +285,7 @@ select.inp{appearance:none}
         <option value="baucua">🎲 Bầu Cua Tôm Cá — 1 đến 10 người</option>
         <option value="taixiu">🎲 Tài Xỉu — 1 đến 10 người</option>
         <option value="xocdia">🪙 Xóc Đĩa — 1 đến 10 người</option>
+        <option value="xidach">🃏 Xì Dách (Blackjack) — 1 đến 10 người</option>
         <option value="crash">✈️ Crash (Máy bay) — 1 đến 10 người</option>
         <option value="dagaga">🐓 Đá Gà Ảo — 1 đến 10 người</option>
         <option value="mines">💣 Mines (Dò mìn) — 1 đến 10 người</option>
@@ -278,6 +303,39 @@ select.inp{appearance:none}
       <input class="inp" id="betAmount" type="number" placeholder="Mức cược mỗi ván (VND)" value="10000" style="display:none"/>
       <div id="betAmountNote" style="font-size:12px;color:#6a9a70;margin:-8px 0 12px">💰 Tự chọn mức cược (VND) khi chơi — không cố định theo phòng</div>
       <button class="btn btn-gold" onclick="createRoom()">Tạo phòng</button>
+      <button class="btn btn-gray" onclick="backToMenu()">← Quay lại</button>
+    </div>
+
+    <!-- Create Tournament -->
+    <div id="createTour" style="display:none">
+      <h2>🏆 Tạo giải đấu</h2>
+      <div id="tourErr" class="err"></div>
+      <input class="inp" id="tourName" placeholder="Tên giải đấu"/>
+      <input class="inp" id="tourPass" placeholder="Mật khẩu phòng"/>
+      <select class="inp" id="tourGame">
+        <option value="baucua">🎲 Bầu Cua</option>
+        <option value="taixiu">🎲 Tài Xỉu</option>
+        <option value="xocdia">🪙 Xóc Đĩa</option>
+        <option value="xidach">🃏 Xì Dách</option>
+        <option value="crash">✈️ Crash</option>
+        <option value="dagaga">🐓 Đá Gà</option>
+        <option value="mines">💣 Mines</option>
+        <option value="duangua">🏇 Đua Ngựa</option>
+      </select>
+      <select class="inp" id="tourMax">
+        <option value="4">4 người</option>
+        <option value="6" selected>6 người</option>
+        <option value="8">8 người</option>
+        <option value="10">10 người</option>
+      </select>
+      <select class="inp" id="tourRounds">
+        <option value="3" selected>3 vòng</option>
+        <option value="5">5 vòng</option>
+        <option value="7">7 vòng</option>
+      </select>
+      <input class="inp" id="tourFee" type="number" placeholder="Phí vào giải (VND)" value="50000"/>
+      <p style="font-size:12px;color:#6a9a70;margin:-6px 0 12px">Phí vào → quỹ giải. Top 1: 60% · Top 2: 30% · Top 3: 10%</p>
+      <button class="btn btn-gold" onclick="createTournament()">Tạo giải đấu</button>
       <button class="btn btn-gray" onclick="backToMenu()">← Quay lại</button>
     </div>
 
@@ -319,6 +377,15 @@ select.inp{appearance:none}
     <button class="btn btn-sm btn-gold" style="margin-top:10px" onclick="collectAllToAdmin()">📥 Thu toàn bộ tiền người chơi → Admin</button>
     <p style="font-size:11px;color:#6a9a70;margin:6px 0">Lấy toàn bộ tiền của mọi tài khoản (trừ admin) chuyển vào Admin</p>
     <button class="btn btn-gray btn-sm" style="margin-top:8px" onclick="closeAdmin()">Đóng</button>
+  </div>
+</div>
+
+<!-- FEATURE MODALS -->
+<div id="featureModal" class="modal">
+  <div class="modal-box" style="max-width:400px;text-align:left;max-height:85vh;overflow-y:auto">
+    <h3 id="featTitle" style="text-align:center">—</h3>
+    <div id="featBody"></div>
+    <button class="btn btn-gray btn-sm" style="margin-top:14px" onclick="closeFeatureModal()">Đóng</button>
   </div>
 </div>
 
@@ -404,17 +471,73 @@ function playTone(freq,dur,type='sine',vol=0.12,delay=0){
   }catch(e){}
 }
 const SFX={
-  click(){playTone(600,0.06,'square',0.06)},
-  bet(){playTone(440,0.08,'triangle',0.1);playTone(660,0.1,'triangle',0.08,0.06)},
-  roll(){playTone(200,0.08,'sawtooth',0.08);playTone(180,0.08,'sawtooth',0.07,0.07);playTone(220,0.1,'sawtooth',0.07,0.14)},
-  win(){playTone(523,0.12,'sine',0.12);playTone(659,0.12,'sine',0.12,0.12);playTone(784,0.2,'sine',0.14,0.24);playTone(1046,0.25,'sine',0.1,0.4)},
-  lose(){playTone(300,0.15,'triangle',0.1);playTone(200,0.22,'triangle',0.1,0.12);playTone(150,0.3,'sawtooth',0.08,0.2)},
-  join(){playTone(500,0.08,'sine',0.1);playTone(700,0.1,'sine',0.1,0.08)},
-  start(){playTone(400,0.1,'square',0.08);playTone(600,0.12,'square',0.08,0.1);playTone(800,0.15,'square',0.1,0.22)},
-  cashout(){playTone(880,0.1,'sine',0.12);playTone(1100,0.15,'sine',0.1,0.1)},
-  explode(){playTone(80,0.4,'sawtooth',0.15);playTone(60,0.5,'square',0.1,0.1)},
-  tick(){playTone(900,0.04,'square',0.04)}
+  click(){playTone(720,0.05,'square',0.05);playTone(900,0.04,'square',0.03,0.04)},
+  bet(){playTone(440,0.07,'triangle',0.1);playTone(554,0.08,'triangle',0.09,0.06);playTone(659,0.1,'triangle',0.08,0.12)},
+  roll(){
+    for(let i=0;i<5;i++) playTone(160+Math.random()*80,0.06,'sawtooth',0.06,i*0.05);
+    playTone(300,0.12,'square',0.05,0.28);
+  },
+  win(){
+    [523,659,784,1046,1319].forEach((f,i)=>playTone(f,0.18,'sine',0.11,i*0.1));
+    playTone(1568,0.35,'sine',0.08,0.55);
+    if(typeof fxConfetti==='function') fxConfetti();
+  },
+  lose(){playTone(280,0.18,'triangle',0.1);playTone(220,0.22,'triangle',0.09,0.14);playTone(160,0.35,'sawtooth',0.07,0.28)},
+  join(){playTone(523,0.08,'sine',0.1);playTone(659,0.1,'sine',0.1,0.08);playTone(784,0.12,'sine',0.09,0.16)},
+  start(){
+    [392,494,587,784].forEach((f,i)=>playTone(f,0.12,'square',0.08,i*0.1));
+    if(typeof fxFlash==='function') fxFlash('#f0c030');
+  },
+  cashout(){
+    playTone(880,0.1,'sine',0.12);playTone(1108,0.12,'sine',0.11,0.08);playTone(1320,0.18,'sine',0.1,0.18);
+    if(typeof fxConfetti==='function') fxConfetti(['💰','✨','⭐']);
+  },
+  explode(){
+    playTone(70,0.5,'sawtooth',0.18);playTone(50,0.55,'square',0.12,0.08);playTone(40,0.4,'sawtooth',0.1,0.15);
+    if(typeof fxShake==='function') fxShake();
+    if(typeof fxFlash==='function') fxFlash('#e74c3c');
+  },
+  tick(){playTone(980,0.035,'square',0.035)},
+  deal(){playTone(500,0.05,'triangle',0.07);playTone(650,0.06,'triangle',0.05,0.04)},
+  levelup(){
+    [523,659,784,1046].forEach((f,i)=>playTone(f,0.15,'sine',0.1,i*0.09));
+    if(typeof fxConfetti==='function') fxConfetti(['🏅','⭐','🎉']);
+  },
+  tour(){
+    [392,523,659,784,1046].forEach((f,i)=>playTone(f,0.14,'square',0.09,i*0.1));
+    if(typeof fxConfetti==='function') fxConfetti(['🏆','👑','💰','⭐']);
+  }
 };
+function fxConfetti(emojis){
+  const layer=document.getElementById('fxLayer'); if(!layer)return;
+  const icons=emojis||['🎉','✨','⭐','🎊','💫','🔥'];
+  for(let i=0;i<18;i++){
+    const el=document.createElement('div');
+    el.className='fx-particle';
+    el.textContent=icons[i%icons.length];
+    const x=20+Math.random()*60, y=30+Math.random()*40;
+    el.style.left=x+'%'; el.style.top=y+'%';
+    el.style.setProperty('--dx',((Math.random()-0.5)*200)+'px');
+    el.style.setProperty('--dy',(-80-Math.random()*120)+'px');
+    el.style.setProperty('--rot',((Math.random()-0.5)*360)+'deg');
+    el.style.fontSize=(14+Math.random()*16)+'px';
+    layer.appendChild(el);
+    setTimeout(()=>el.remove(),1300);
+  }
+}
+function fxFlash(color){
+  const el=document.createElement('div');
+  el.className='fx-flash';
+  if(color) el.style.background=color;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),400);
+}
+function fxShake(){
+  const area=document.getElementById('gameContent')||document.body;
+  area.classList.add('fx-shake');
+  setTimeout(()=>area.classList.remove('fx-shake'),500);
+}
+
 function speak(text){
   if(!sfxOn)return;
   try{
@@ -625,9 +748,10 @@ function doAuth(){
 }
 
 function enterApp(){
+  if(typeof ensureUserExtras==='function')ensureUserExtras(me);
   document.getElementById('authSection').style.display='none';
   document.getElementById('mainMenu').style.display='block';
-  document.getElementById('myTag').textContent='👤 '+me.displayName;
+  document.getElementById('myTag').textContent=(me.avatar||'👤')+' '+me.displayName;
   refreshMyCoin();
   if(me.isAdmin)document.getElementById('adminMenuBtn').style.display='block';
 }
@@ -677,7 +801,7 @@ function showRoomBrowser(){
   renderRoomBrowser();
 }
 function backToMenu(){
-  ['createRoom','joinRoom','roomBrowser'].forEach(id=>document.getElementById(id).style.display='none');
+  ['createRoom','createTour','joinRoom','roomBrowser'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none'});
   document.getElementById('mainMenu').style.display='block';
 }
 
@@ -700,6 +824,7 @@ function gameTypeLabel(g){
   if(g==='baucua')return '🎲 Bầu Cua';
   if(g==='taixiu')return '🎲 Tài Xỉu';
   if(g==='xocdia')return '🪙 Xóc Đĩa';
+  if(g==='xidach')return '🃏 Xì Dách';
   if(g==='crash')return '✈️ Crash';
   if(g==='dagaga')return '🐓 Đá Gà';
   if(g==='mines')return '💣 Mines';
@@ -723,17 +848,15 @@ function createRoom(){
   SFX.join();
 }
 
-function joinRoom(){
+async function joinRoom(){
   try{
     if(!firebaseReady){toast('Đang kết nối máy chủ, vui lòng đợi giây lát...');return}
     if(!me){showErr('joinErr','Hãy đăng nhập trước');return}
     let id=document.getElementById('joinId').value.trim().replace(/\s/g,'');
     const pass=document.getElementById('joinPass').value;
     if(!id||!pass){showErr('joinErr','Nhập ID và mật khẩu phòng');return}
-    // Hỗ trợ ID số (string key trên Firebase)
     let room=getRoom(id);
     if(!room&&getRooms()){
-      // Thử tìm không phân biệt khoảng trắng / kiểu
       const all=getRooms();
       const key=Object.keys(all).find(k=>String(k)===String(id));
       if(key){id=key;room=all[key]}
@@ -742,11 +865,28 @@ function joinRoom(){
     if(String(room.pass)!==String(pass)){showErr('joinErr','Sai mật khẩu phòng');return}
     if(!room.players)room.players=[];
     if(!room.spectators)room.spectators=[];
-    // Đã là player hoặc spectator → vào lại
     if(room.players.includes(me.username)||room.spectators.includes(me.username)){
       inRoom=id;enterRoom(id);return;
     }
-    // Còn chỗ → vào chơi; đầy → vào xem (spectator)
+    // Tournament: phải nộp phí trước khi vào chơi
+    if(room.tournament&&room.tournament.active&&!room.tournament.finished){
+      if(room.players.length>=room.max){
+        room.spectators.push(me.username);
+        updateRoom(id,room);
+        inRoom=id;enterRoom(id);SFX.join();
+        toast('Phòng đầy — vào xem giải');
+        return;
+      }
+      inRoom=id;
+      const paid=await tourPayEntry(room);
+      if(!paid){inRoom=null;return}
+      room=getRoom(id)||room;
+      if(!room.players.includes(me.username)) room.players.push(me.username);
+      updateRoom(id,room);
+      enterRoom(id);SFX.join();
+      toast('Đã vào giải đấu!');
+      return;
+    }
     if(room.players.length<room.max){
       room.players.push(me.username);
       updateRoom(id,room);
@@ -780,8 +920,9 @@ function renderRoomBrowser(){
     const full=r.players.length>=r.max;
     const st=r.status==='playing'?'🎮 Đang chơi':'⏳ Chờ';
     const nSpec=(r.spectators||[]).length;
-    div.innerHTML=`<div><div class="rname">${escHtml(r.name)} <span class="lock-icon">🔒</span></div>
-      <div class="rinfo">${gameTypeLabel(r.gameType)} · ${r.players.length}/${r.max} người · ${st}${full?' · Đầy':''}${nSpec?` · ${nSpec} đang xem`:''}</div>
+    const isTour=!!(r.tournament&&r.tournament.active);
+    div.innerHTML=`<div><div class="rname">${escHtml(r.name)} ${isTour?'🏆':''}<span class="lock-icon">🔒</span></div>
+      <div class="rinfo">${isTour?'Giải · ':''}${gameTypeLabel(r.gameType)} · ${r.players.length}/${r.max} người · ${st}${full?' · Đầy':''}${nSpec?` · ${nSpec} đang xem`:''}${isTour?` · Quỹ ${fmtVnd(r.tournament.pot||0)}`:''}</div>
       <div class="rinfo">ID: <strong>${r.id}</strong></div></div>
       <button class="btn btn-sm ${full?'btn-gray':'btn-green'}" onclick="quickJoinRoom('${r.id}')">${full?'👁 Xem':'Vào'}</button>`;
     el.appendChild(div);
@@ -796,7 +937,7 @@ function quickJoinRoom(id){
 
 function enterRoom(id){
   inRoom=id;
-  ['createRoom','joinRoom','roomBrowser','mainMenu'].forEach(x=>{
+  ['createRoom','createTour','joinRoom','roomBrowser','mainMenu'].forEach(x=>{
     const el=document.getElementById(x);if(el)el.style.display='none';
   });
   document.getElementById('lobby').style.display='none';
@@ -855,11 +996,12 @@ function refreshRoom(){
   if(!room.players.includes(me.username)&&!room.spectators.includes(me.username)){
     leaveRoom();return;
   }
-  document.getElementById('roomTitleDisp').textContent=room.name;
+  const isTour=!!(room.tournament&&room.tournament.active);
+  document.getElementById('roomTitleDisp').innerHTML=escHtml(room.name)+(isTour?' <span class="tour-badge">🏆 GIẢI</span>':'');
   const specTag=isSpectator(room)?' · 👁 Đang xem':'';
-  document.getElementById('roomSubDisp').textContent=gameTypeLabel(room.gameType)+' · Tự chọn mức cược (VND)'+specTag;
+  const tourTag=isTour?` · Vòng ${room.tournament.currentRound}/${room.tournament.rounds} · Quỹ ${fmtVnd(room.tournament.pot||0)}`:'';
+  document.getElementById('roomSubDisp').textContent=gameTypeLabel(room.gameType)+(isTour?'':' · Tự chọn mức cược (VND)')+tourTag+specTag;
   document.getElementById('roomIdDisp').textContent='ID: '+room.id+' 🔒';
-  // Nút âm thanh trên header
   let sfxEl=document.getElementById('sfxBtn');
   if(!sfxEl){
     const hdr=document.querySelector('.room-header > div:last-child');
@@ -873,10 +1015,22 @@ function refreshRoom(){
     }
   }
   refreshMyCoin();
+  // Tournament: khi ván xong (phase done) → host chấm điểm sau 2.5s
+  if(isTour && room.status==='playing' && room.gameState && room.gameState.phase==='done' && room.host===me.username && !room.tournament._scoring){
+    room.tournament._scoring=true;
+    updateRoom(inRoom, room);
+    setTimeout(()=>{
+      const r2=getRoom(inRoom);
+      if(!r2||!r2.tournament||!r2.gameState||r2.gameState.phase!=='done')return;
+      const results=r2.gameState.results||{};
+      if(typeof tourOnRoundEnd==='function') tourOnRoundEnd(results);
+    },2500);
+  }
   if(room.status==='waiting')renderWaiting(room);
   else if(room.gameType==='baucua')renderBauCua(room);
   else if(room.gameType==='taixiu')renderTaiXiu(room);
   else if(room.gameType==='xocdia')renderXocDia(room);
+  else if(room.gameType==='xidach')renderXidach(room);
   else if(room.gameType==='crash')renderCrash(room);
   else if(room.gameType==='dagaga')renderDaGa(room);
   else if(room.gameType==='mines')renderMines(room);
@@ -894,9 +1048,19 @@ function renderWaiting(room){
   const minP=1;
   const specs=room.spectators||[];
   const imSpec=isSpectator(room);
-  let html=`<div class="waiting-msg"><h3 style="color:var(--gold);margin-bottom:6px">⏳ Đang chờ người chơi</h3>
-    <p style="font-size:13px">${room.players.length}/${room.max} ghế · Có thể bắt đầu từ ${minP} người</p>
-    <p style="font-size:12px;color:#6a9a70;margin-top:4px">Phòng đầy vẫn vào xem được · ID + mật khẩu</p></div>`;
+  const isTour=!!(room.tournament&&room.tournament.active);
+  let html=``;
+  if(isTour){
+    const t=room.tournament;
+    html+=`<div class="waiting-msg"><h3 style="color:var(--gold);margin-bottom:6px">🏆 Giải đấu: ${escHtml(room.name)}</h3>
+      <p style="font-size:13px">${gameTypeLabel(room.gameType)} · ${t.rounds} vòng · Phí ${fmtVnd(t.fee)} · Quỹ ${fmtVnd(t.pot||0)}</p>
+      <p style="font-size:12px;color:#6a9a70;margin-top:4px">${room.players.length}/${room.max} người · Vòng hiện tại: ${t.currentRound}/${t.rounds}${t.finished?' · ĐÃ KẾT THÚC':''}</p></div>`;
+    if(typeof renderTourStandings==='function') html+=renderTourStandings(room);
+  } else {
+    html+=`<div class="waiting-msg"><h3 style="color:var(--gold);margin-bottom:6px">⏳ Đang chờ người chơi</h3>
+      <p style="font-size:13px">${room.players.length}/${room.max} ghế · Có thể bắt đầu từ ${minP} người</p>
+      <p style="font-size:12px;color:#6a9a70;margin-top:4px">Phòng đầy vẫn vào xem được · ID + mật khẩu</p></div>`;
+  }
   if(imSpec)html+=`<div class="spec-banner">👁 Bạn đang xem phòng — không đặt cược được</div>`;
   // Ghế ngồi
   html+=`<div class="seat-grid">`;
@@ -934,6 +1098,8 @@ function renderWaiting(room){
   }
   if(imSpec){
     html+=`<div class="waiting-msg" style="padding:8px;font-size:13px;color:#9dbfa0">Bạn đang xem — chờ có ghế trống hoặc chủ phòng bắt đầu</div>`;
+  } else if(isTour){
+    // Nút bắt đầu vòng nằm trong renderTourStandings
   } else if(isHost&&room.players.length>=minP){
     html+=`<div class="ready-row"><button class="btn btn-gold" style="width:200px" onclick="startGame()">▶ Bắt đầu ván</button></div>`;
   } else if(!isHost){
@@ -1014,6 +1180,7 @@ function startGame(){
     if(room.gameType==='baucua'){startBauCua(room,users);SFX.start();return}
     if(room.gameType==='taixiu'){startTaiXiu(room,users);SFX.start();return}
     if(room.gameType==='xocdia'){startXocDia(room,users);SFX.start();return}
+    if(room.gameType==='xidach'){startXidach(room,users);SFX.start();return}
     if(room.gameType==='crash'){startCrash(room,users);SFX.start();return}
     if(room.gameType==='dagaga'){startDaGa(room,users);SFX.start();return}
     if(room.gameType==='mines'){startMines(room,users);SFX.start();return}
@@ -1209,6 +1376,334 @@ window.bcRoll=function(){
     updateRoom(inRoom,r2);
   },1800);
 }
+
+
+// ======================================================
+// XÌ DÁCH (BLACKJACK) — bản ổn định, đồng bộ Firebase
+// ======================================================
+const BJ_SUITS = ['♠','♥','♦','♣'];
+const BJ_RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+let bjChipValue = 1000;
+
+function bjCreateDeck(){
+  const deck = [];
+  BJ_SUITS.forEach(s => BJ_RANKS.forEach(r => deck.push(r + s)));
+  for(let i = deck.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+function bjCardValue(rank){
+  if(rank === 'A') return 11;
+  if(['J','Q','K'].includes(rank)) return 10;
+  return parseInt(rank, 10);
+}
+function bjHandScore(cards){
+  if(!cards || !cards.length) return 0;
+  let total = 0, aces = 0;
+  cards.forEach(c => {
+    const rank = c.slice(0, -1);
+    if(rank === 'A'){ aces++; total += 11; }
+    else total += bjCardValue(rank);
+  });
+  while(total > 21 && aces > 0){ total -= 10; aces--; }
+  return total;
+}
+function bjIsRed(card){ return card.endsWith('♥') || card.endsWith('♦'); }
+function bjRenderCard(card, hidden){
+  if(hidden){
+    return `<div class="card" style="background:#1a5a9a;border-color:#0d3a6a;color:#1a5a9a"><div class="rank">?</div><div class="suit">🂠</div><div class="rank-bot">?</div></div>`;
+  }
+  const rank = card.slice(0, -1);
+  const suit = card.slice(-1);
+  const red = bjIsRed(card) ? ' red' : '';
+  return `<div class="card${red}"><div class="rank">${rank}</div><div class="suit">${suit}</div><div class="rank-bot">${rank}</div></div>`;
+}
+
+function startXidach(room, users){
+  room.status = 'playing';
+  room.gameState = { phase:'betting', bets:{}, deck:[], hands:{}, turnOrder:[], currentTurnIndex:0, results:{}, dealerHidden:true };
+  updateRoom(inRoom, room);
+}
+
+function renderXidach(room){
+  const gs = room.gameState || {};
+  const gc = document.getElementById('gameContent');
+  const users = getUsers();
+  const isHost = room.host === me.username;
+  const myBetObj = gs.bets && gs.bets[me.username];
+  const myBet = (myBetObj && (myBetObj.main || myBetObj)) | 0 || (typeof myBetObj === 'number' ? myBetObj : 0);
+  const phase = gs.phase || 'betting';
+  const hands = gs.hands || {};
+  const dealerHand = hands.dealer || [];
+  const myHand = hands[me.username] || [];
+  const turnOrder = gs.turnOrder || [];
+  const curIdx = gs.currentTurnIndex || 0;
+  const currentPlayer = turnOrder[curIdx] || null;
+  const isMyTurn = phase === 'playing' && currentPlayer === me.username;
+  const canAct = isMyTurn && canBetNow(room);
+
+  let html = `<div class="tl-table">`;
+  html += `<div class="center-area">
+    <div class="pname" style="margin-bottom:8px">🃏 Nhà cái (Dealer)${phase === 'done' || phase === 'dealer' ? ' · ' + bjHandScore(dealerHand) + ' điểm' : ''}</div>
+    <div class="my-hand">`;
+  if(phase === 'betting' || !dealerHand.length){
+    html += `<div class="card" style="opacity:.4"><div class="rank">?</div><div class="suit">🂠</div><div class="rank-bot">?</div></div>
+             <div class="card" style="opacity:.4"><div class="rank">?</div><div class="suit">🂠</div><div class="rank-bot">?</div></div>`;
+  } else {
+    dealerHand.forEach((c, i) => {
+      const hide = (phase === 'playing') && i === 0 && gs.dealerHidden !== false;
+      html += bjRenderCard(c, hide);
+    });
+  }
+  html += `</div></div>`;
+  html += renderPlayersRingHtml(room, gs);
+  html += `<div class="status-msg">`;
+  if(phase === 'betting') html += `<div class="turn-indicator">💰 Đặt cược rồi chờ nhà cái chia bài</div>`;
+  else if(phase === 'playing'){
+    const curName = (users[currentPlayer] && users[currentPlayer].displayName) || currentPlayer || '?';
+    html += `<div class="turn-indicator">🎯 Lượt của: <b style="color:var(--gold)">${escHtml(curName)}</b></div>`;
+  } else if(phase === 'dealer') html += `<div class="turn-indicator">🃏 Nhà cái đang rút bài...</div>`;
+  else if(phase === 'done') html += `<div class="turn-indicator" style="color:#27a85f">✅ Ván kết thúc</div>`;
+  html += `</div>`;
+
+  html += `<div class="center-area">`;
+  if(phase !== 'betting' && myHand.length){
+    const myScore = bjHandScore(myHand);
+    const bust = myScore > 21;
+    html += `<div class="pname" style="margin-bottom:8px">Bài của bạn · <span style="color:${bust ? 'var(--red)' : 'var(--gold)'}">${myScore} điểm${bust ? ' — QUẮC' : ''}</span></div>
+      <div class="my-hand">${myHand.map(c => bjRenderCard(c, false)).join('')}</div>`;
+  }
+  if(phase === 'betting'){
+    html += `<div class="pname" style="margin-bottom:10px">Chọn mức cược</div><div class="bet-row">`;
+    CHIP_VALUES.forEach(v => {
+      html += `<div class="chip c${v}${bjChipValue === v ? ' chip-selected' : ''}" onclick="bjSetChip(${v})">${chipLabel(v)}</div>`;
+    });
+    html += `</div>`;
+    if(myBet > 0) html += `<div style="margin:8px 0;font-size:14px;color:var(--gold)">Cược của bạn: ${fmtVnd(myBet)}</div>`;
+    html += renderPublicBetsHtml(gs, 'main');
+    html += `<div class="action-row">
+      <button class="btn btn-gray" onclick="bjClearBet()">↺ Hủy cược</button>
+      <button class="btn btn-gold" onclick="bjPlaceBet()">Đặt ${chipLabel(bjChipValue)}</button>
+      ${isHost ? `<button class="btn btn-green" onclick="bjDeal()">🃏 Chia bài</button>` : ''}
+    </div>`;
+    if(!isHost) html += `<div style="color:#9dbfa0;font-size:13px;margin-top:8px">Chờ nhà cái chia bài...</div>`;
+  }
+  if(phase === 'playing' && canAct){
+    html += `<div class="action-row" style="margin-top:14px">
+      <button class="btn btn-gold" onclick="bjHit()">🃏 Rút bài</button>
+      <button class="btn btn-green" onclick="bjStand()">✋ Dằn</button>
+    </div>`;
+  } else if(phase === 'playing' && !canAct && isPlayer(room)){
+    html += `<div style="color:#9dbfa0;font-size:13px;margin-top:10px">Chờ đến lượt của bạn...</div>`;
+  }
+  if(phase === 'done'){
+    const res = (gs.results && gs.results[me.username]) || null;
+    if(res){
+      const cls = res.net > 0 ? 'result-win' : (res.net < 0 ? 'result-lose' : 'result-draw');
+      html += `<div class="result-badge ${cls}" style="margin:12px 0">
+        ${res.net > 0 ? '🏆 Thắng +' + fmtVnd(res.net) : res.net < 0 ? '💸 Thua -' + fmtVnd(Math.abs(res.net)) : '🤝 Hòa'}
+        <div style="font-size:13px;color:#9dbfa0;margin-top:4px">Bạn: ${res.score} · Nhà cái: ${res.dealerScore}</div>
+      </div>`;
+    }
+    if(isHost) html += `<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+    else html += `<div style="color:#9dbfa0;font-size:13px;margin-top:8px">Chờ nhà cái bắt đầu ván mới...</div>`;
+  }
+  if(phase !== 'betting' && turnOrder.length){
+    html += `<div style="margin-top:16px;width:100%"><div class="pname" style="margin-bottom:8px">Bài người chơi</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">`;
+    turnOrder.forEach(p => {
+      const h = hands[p] || [];
+      const score = bjHandScore(h);
+      const u = users[p] || {displayName: p};
+      const isCur = phase === 'playing' && p === currentPlayer;
+      html += `<div style="background:#0d1f0f66;border:2px solid ${isCur ? 'var(--gold)' : 'var(--border)'};border-radius:12px;padding:10px;min-width:100px;text-align:center">
+        <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px">${escHtml(u.displayName)}${isCur ? ' ←' : ''}</div>
+        <div class="mini-cards">${h.map(c => {
+          const red = bjIsRed(c) ? ' red-card' : '';
+          return `<div class="mini-card${red}">${c.slice(0,-1)}${c.slice(-1)}</div>`;
+        }).join('')}</div>
+        <div class="score-badge">${score > 21 ? 'QUẮC' : score + ' điểm'}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+  html += `</div></div>`;
+  gc.innerHTML = html;
+  if(isHost && phase === 'playing') setTimeout(() => bjHostWatchTurn(room), 300);
+}
+
+window.bjSetChip = function(v){
+  if(!canBetNow(getRoom(inRoom))){ toast('Bạn đang xem — không đặt được'); return; }
+  bjChipValue = v; SFX.click();
+  const room = getRoom(inRoom); if(room) renderXidach(room);
+};
+window.bjPlaceBet = async function(){
+  const room = getRoom(inRoom);
+  if(!room || !canBetNow(room)){ toast('Bạn đang xem — không đặt được'); return; }
+  const gs = room.gameState;
+  if(!gs || gs.phase !== 'betting') return;
+  if(gs.bets && gs.bets[me.username] && gs.bets[me.username].main){ toast('Bạn đã đặt cược rồi'); return; }
+  const amt = bjChipValue;
+  const ok = await changeCoinsTx(me.username, -amt);
+  if(!ok){ toast('Không đủ tiền hoặc đang xử lý!'); return; }
+  await setBetPath(inRoom, me.username, 'main', amt);
+  if(!gs.bets) gs.bets = {};
+  if(!gs.bets[me.username]) gs.bets[me.username] = {};
+  gs.bets[me.username].main = amt;
+  SFX.bet(); renderXidach(room);
+};
+window.bjClearBet = async function(){
+  const room = getRoom(inRoom);
+  if(!room || !canBetNow(room)) return;
+  const gs = room.gameState;
+  if(!gs || gs.phase !== 'betting') return;
+  const amt = (gs.bets && gs.bets[me.username] && gs.bets[me.username].main) || 0;
+  if(amt <= 0) return;
+  await changeCoinsTx(me.username, amt);
+  await clearMyBetsPath(inRoom, me.username);
+  if(gs.bets) gs.bets[me.username] = {};
+  SFX.click(); renderXidach(room);
+};
+window.bjDeal = function(){
+  const room = getRoom(inRoom);
+  if(!room || room.host !== me.username) return;
+  const gs = room.gameState;
+  if(!gs || gs.phase !== 'betting') return;
+  const bettors = Object.keys(gs.bets || {}).filter(u => {
+    const b = gs.bets[u];
+    const amt = (b && typeof b === 'object') ? (b.main || 0) : (Number(b) || 0);
+    return amt > 0 && room.players.includes(u);
+  });
+  if(bettors.length === 0){ toast('Chưa có ai đặt cược'); return; }
+  const deck = bjCreateDeck();
+  const hands = { dealer: [] };
+  bettors.forEach(p => { hands[p] = []; });
+  for(let round = 0; round < 2; round++){
+    bettors.forEach(p => { hands[p].push(deck.pop()); });
+    hands.dealer.push(deck.pop());
+  }
+  gs.deck = deck; gs.hands = hands; gs.turnOrder = bettors.slice();
+  gs.currentTurnIndex = 0; gs.dealerHidden = true; gs.results = {}; gs.phase = 'playing';
+  room.gameState = gs; updateRoom(inRoom, room);
+  SFX.start(); speak('Chia bài');
+  setTimeout(() => bjCheckAutoStand(), 400);
+};
+function bjNextTurn(){
+  const room = getRoom(inRoom);
+  if(!room || room.host !== me.username) return;
+  const gs = room.gameState;
+  if(!gs || gs.phase !== 'playing') return;
+  let idx = (gs.currentTurnIndex || 0) + 1;
+  while(idx < gs.turnOrder.length){
+    const p = gs.turnOrder[idx];
+    if(bjHandScore(gs.hands[p] || []) <= 21) break;
+    idx++;
+  }
+  if(idx >= gs.turnOrder.length){
+    gs.phase = 'dealer'; gs.dealerHidden = false; gs.currentTurnIndex = idx;
+    room.gameState = gs; updateRoom(inRoom, room);
+    setTimeout(() => bjDealerPlay(), 600);
+  } else {
+    gs.currentTurnIndex = idx; room.gameState = gs; updateRoom(inRoom, room);
+  }
+}
+function bjCheckAutoStand(){
+  const room = getRoom(inRoom); if(!room) return;
+  const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
+  const cur = gs.turnOrder[gs.currentTurnIndex]; if(!cur) return;
+  if(bjHandScore(gs.hands[cur] || []) >= 21 && room.host === me.username) setTimeout(() => bjNextTurn(), 500);
+}
+window.bjHit = function(){
+  const room = getRoom(inRoom); if(!room || !canBetNow(room)) return;
+  const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
+  const cur = gs.turnOrder[gs.currentTurnIndex];
+  if(cur !== me.username){ toast('Chưa đến lượt bạn'); return; }
+  if(!gs.deck || gs.deck.length === 0){ toast('Hết bài trong bộ'); return; }
+  const card = gs.deck.pop();
+  if(!gs.hands[me.username]) gs.hands[me.username] = [];
+  gs.hands[me.username].push(card);
+  room.gameState = gs; updateRoom(inRoom, room); SFX.click();
+  const score = bjHandScore(gs.hands[me.username]);
+  if(score > 21){ SFX.lose(); speak('Quắc'); if(room.host === me.username) setTimeout(() => bjNextTurn(), 700); }
+  else if(score === 21){ speak('Xì'); if(room.host === me.username) setTimeout(() => bjNextTurn(), 700); }
+};
+window.bjStand = function(){
+  const room = getRoom(inRoom); if(!room || !canBetNow(room)) return;
+  const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
+  const cur = gs.turnOrder[gs.currentTurnIndex];
+  if(cur !== me.username){ toast('Chưa đến lượt bạn'); return; }
+  SFX.click();
+  if(room.host === me.username) bjNextTurn();
+  else {
+    if(!gs.stood) gs.stood = {};
+    gs.stood[me.username] = true;
+    room.gameState = gs; updateRoom(inRoom, room);
+  }
+};
+let _bjAdvancing = false;
+function bjHostWatchTurn(room){
+  if(!room || room.host !== me.username || _bjAdvancing) return;
+  const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
+  const cur = gs.turnOrder[gs.currentTurnIndex]; if(!cur) return;
+  const score = bjHandScore(gs.hands[cur] || []);
+  const stood = gs.stood && gs.stood[cur];
+  if(score > 21 || score === 21 || stood){
+    _bjAdvancing = true;
+    if(gs.stood) delete gs.stood[cur];
+    setTimeout(() => { bjNextTurn(); _bjAdvancing = false; }, 450);
+  }
+}
+function bjDealerPlay(){
+  const room = getRoom(inRoom); if(!room || room.host !== me.username) return;
+  const gs = room.gameState; if(!gs || gs.phase !== 'dealer') return;
+  while(bjHandScore(gs.hands.dealer || []) < 17 && gs.deck && gs.deck.length){
+    gs.hands.dealer.push(gs.deck.pop());
+  }
+  gs.dealerHidden = false; room.gameState = gs; updateRoom(inRoom, room);
+  setTimeout(() => bjSettle(), 900);
+}
+function bjSettle(){
+  const room = getRoom(inRoom); if(!room || room.host !== me.username) return;
+  const gs = room.gameState; if(!gs) return;
+  const dealerScore = bjHandScore(gs.hands.dealer || []);
+  const dealerBust = dealerScore > 21;
+  const users = getUsers();
+  const results = {};
+  let hostDelta = 0;
+  const hostUser = room.host;
+  (gs.turnOrder || []).forEach(p => {
+    const hand = gs.hands[p] || [];
+    const score = bjHandScore(hand);
+    const b = gs.bets && gs.bets[p];
+    const staked = (b && typeof b === 'object') ? (b.main || 0) : (Number(b) || 0);
+    let net = -staked, winAmount = 0;
+    if(score > 21) net = -staked;
+    else if(dealerBust){ winAmount = staked * 2; net = staked; }
+    else if(score > dealerScore){ winAmount = staked * 2; net = staked; }
+    else if(score === dealerScore){ winAmount = staked; net = 0; }
+    else net = -staked;
+    if(hand.length === 2 && score === 21 && net > 0){
+      winAmount = Math.floor(staked * 2.5); net = winAmount - staked;
+    }
+    results[p] = { net, score, dealerScore, bust: score > 21 };
+    if(users[p] && winAmount > 0) users[p].coins = (users[p].coins || 0) + winAmount;
+    if(p !== hostUser) hostDelta -= net;
+  });
+  if(users[hostUser]) users[hostUser].coins = Math.max(0, (users[hostUser].coins || 0) + hostDelta);
+  saveUsers(users);
+  gs.results = results; gs.phase = 'done'; gs.dealerHidden = false;
+  room.gameState = gs; updateRoom(inRoom, room);
+  const myNet = results[me.username] && results[me.username].net;
+  if(myNet > 0){ SFX.win(); speak('Thắng rồi!'); }
+  else if(myNet < 0){ SFX.lose(); speak('Thua rồi'); }
+  else if(myNet === 0) speak('Hòa');
+  if(typeof pushHistory === 'function' && me && results[me.username]){
+    pushHistory('Xì Dách', results[me.username].net, results[me.username].score + ' vs ' + dealerScore);
+  }
+}
+
 
 // ======================================================
 // TÀI XỈU
@@ -1613,30 +2108,48 @@ function renderCrash(room){
   const gs=room.gameState||{};
   const gc=document.getElementById('gameContent');
   const isHost=room.host===me.username;
-  const myBet=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  const myBetObj=gs.bets&&gs.bets[me.username];
+  const myBet=(myBetObj&&(myBetObj.main||myBetObj))|0 || (typeof myBetObj==='number'?myBetObj:0);
   const myCashed=gs.cashed&&gs.cashed[me.username];
   let html=`<div class="tl-table"><div class="center-area">
     <div class="pname" style="margin-bottom:8px">✈️ Crash — Máy bay tăng hệ số</div>
-    <div style="font-size:48px;font-weight:900;color:var(--gold);min-height:60px" id="crashMulDisp">${gs.phase==='flying'||gs.phase==='done'?(gs.multiplier||1).toFixed(2)+'x':'1.00x'}</div>
+    <div style="font-size:52px;font-weight:900;color:var(--gold);min-height:64px;text-shadow:0 0 20px #f0c03066" id="crashMulDisp">${gs.phase==='flying'||gs.phase==='done'?(gs.multiplier||1).toFixed(2)+'x':'1.00x'}</div>
     <div style="font-size:13px;color:#9dbfa0;margin-top:4px">${gs.phase==='betting'?'Đặt cược rồi chờ cất cánh':gs.phase==='flying'?'Đang bay... bấm RÚT trước khi nổ!':gs.phase==='done'?('Nổ tại '+(gs.crashAt||0).toFixed(2)+'x'):''}</div>
   </div>`;
   html+=renderPlayersRingHtml(room,gs);
   html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược':gs.phase==='flying'?'✈️ Đang bay — Rút ngay!':'✅ Ván kết thúc'}</div></div>`;
-  html+=`<div class="center-area"><div class="pname" style="margin-bottom:10px">Chọn mức cược</div><div class="bet-row">`;
-  CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${crashChipValue===v?' chip-selected':''}" onclick="crashSetChip(${v})">${chipLabel(v)}</div>`});
-  html+=`</div>`;
-  if(myBet)html+=`<div style="margin:8px 0;font-size:14px;color:var(--gold)">Cược của bạn: ${fmtVnd(myBet)}${myCashed?` → Đã rút @ ${myCashed.at.toFixed(2)}x (+${fmtVnd(myCashed.win)})`:''}</div>`;
-  html+=renderPublicBetsHtml(gs,'main');
+  if(gs.phase==='flying'){
+    if(myBet>0 && !myCashed){
+      const est=Math.floor(myBet*(gs.multiplier||1));
+      html+=`<div class="action-row" style="margin:12px 0">
+        <button class="btn btn-gold" style="font-size:20px;padding:16px 36px;width:100%;max-width:280px;box-shadow:0 0 24px #f0c03088;animation:pulse 1.2s infinite" onclick="crashCashout()">
+          💰 RÚT TIỀN · ${fmtVnd(est)}
+        </button>
+      </div>
+      <div style="text-align:center;font-size:13px;color:var(--gold);margin-bottom:8px">Cược: ${fmtVnd(myBet)}</div>`;
+    } else if(myCashed){
+      html+=`<div style="text-align:center;margin:12px 0;font-size:16px;color:#27a85f;font-weight:700">✅ Đã rút @ ${myCashed.at.toFixed(2)}x (+${fmtVnd(myCashed.win)})</div>`;
+    } else {
+      html+=`<div style="text-align:center;margin:12px 0;font-size:13px;color:#e74c3c">Bạn chưa đặt cược ván này — không rút được</div>`;
+    }
+  }
+  html+=`<div class="center-area">`;
   if(gs.phase==='betting'){
+    html+=`<div class="pname" style="margin-bottom:10px">Chọn mức cược</div><div class="bet-row">`;
+    CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${crashChipValue===v?' chip-selected':''}" onclick="crashSetChip(${v})">${chipLabel(v)}</div>`});
+    html+=`</div>`;
+    if(myBet)html+=`<div style="margin:8px 0;font-size:14px;color:var(--gold)">Cược của bạn: ${fmtVnd(myBet)}</div>`;
+    html+=renderPublicBetsHtml(gs,'main');
     html+=`<div class="action-row">
       <button class="btn btn-gray" onclick="crashClearBet()">↺ Hủy cược</button>
       <button class="btn btn-gold" onclick="crashPlaceBet()">Đặt cược ${chipLabel(crashChipValue)}</button>
       ${isHost?`<button class="btn btn-green" onclick="crashStartFly()">🚀 Cất cánh</button>`:''}
     </div>`;
-  } else if(gs.phase==='flying' && myBet && !myCashed){
-    html+=`<div class="action-row"><button class="btn btn-gold" style="font-size:18px;padding:14px 28px" onclick="crashCashout()">💰 RÚT TIỀN</button></div>`;
   } else if(gs.phase==='done'&&isHost){
+    html+=renderPublicBetsHtml(gs,'main');
     html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  } else {
+    html+=renderPublicBetsHtml(gs,'main');
   }
   html+=`</div></div>`;
   gc.innerHTML=html;
@@ -1666,41 +2179,51 @@ window.crashClearBet=async function(){
 window.crashStartFly=function(){
   const room=getRoom(inRoom);if(!room||room.host!==me.username)return;
   const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
-  // Random crash point (house edge ~3%)
+  const hasBet=Object.keys(gs.bets||{}).some(u=>{
+    const b=gs.bets[u];return (b&&(b.main||b))>0 || (typeof b==='number'&&b>0);
+  });
+  if(!hasBet){toast('Cần ít nhất 1 người đặt cược trước khi cất cánh!');return}
   const r=Math.random();
   const crashAt = r<0.03 ? 1.00 : Math.max(1.01, Math.floor((0.97/(1-r))*100)/100);
   gs.crashAt=crashAt;gs.multiplier=1;gs.phase='flying';gs.cashed=gs.cashed||{};
   room.gameState=gs;updateRoom(inRoom,room);
   SFX.start();speak('Máy bay cất cánh');
-  // Local animation for host, others follow via listener
   if(crashAnimTimer)clearInterval(crashAnimTimer);
   let mul=1;
   crashAnimTimer=setInterval(()=>{
+    const r2=getRoom(inRoom);
+    if(!r2||!r2.gameState||r2.gameState.phase!=='flying'){
+      clearInterval(crashAnimTimer);crashAnimTimer=null;return;
+    }
+    if(r2.gameState.cashed) gs.cashed=r2.gameState.cashed;
     mul = Math.min(crashAt, +(mul + 0.01 + mul*0.012).toFixed(2));
     gs.multiplier=mul;
-    // optimistic local update for host
+    r2.gameState.multiplier=mul;
     const disp=document.getElementById('crashMulDisp');
     if(disp)disp.textContent=mul.toFixed(2)+'x';
+    const btn=document.querySelector('button[onclick="crashCashout()"]');
+    if(btn&&gs.bets&&gs.bets[me.username]){
+      const st=(gs.bets[me.username].main||gs.bets[me.username])|0;
+      if(st>0) btn.innerHTML='💰 RÚT TIỀN · '+fmtVnd(Math.floor(st*mul));
+    }
     if(mul>=crashAt){
       clearInterval(crashAnimTimer);crashAnimTimer=null;
       SFX.explode();speak('Nổ rồi!');
-      // settle
       const users=getUsers();
       const results={};
       Object.keys(gs.bets||{}).forEach(p=>{
-        const staked=(gs.bets[p]&&gs.bets[p].main)||0;
+        const b=gs.bets[p];
+        const staked=(b&&(b.main||b))|0 || (typeof b==='number'?b:0);
         const c=gs.cashed&&gs.cashed[p];
         let net=-staked;
-        if(c){net=c.win-staked;if(users[p])users[p].coins=(users[p].coins||0)+c.win}
+        if(c){net=c.win-staked}
         results[p]={net};
       });
-      // host bank roughly
       saveUsers(users);
       gs.results=results;gs.phase='done';gs.multiplier=crashAt;
       room.gameState=gs;updateRoom(inRoom,room);
     } else {
-      // push multiplier occasionally so others see it rise
-      if(Math.random()<0.25) updateRoom(inRoom,room);
+      if(Math.random()<0.3) updateRoom(inRoom,room);
     }
   },120);
 };
@@ -1708,17 +2231,24 @@ window.crashCashout=async function(){
   const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
   const gs=room.gameState;if(!gs||gs.phase!=='flying')return;
   if(gs.cashed&&gs.cashed[me.username])return;
-  const staked=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
-  if(staked<=0)return;
-  const at=gs.multiplier||1;
+  const b=gs.bets&&gs.bets[me.username];
+  const staked=(b&&(b.main||b))|0 || (typeof b==='number'?b:0);
+  if(staked<=0){toast('Bạn chưa đặt cược!');return}
+  let at=gs.multiplier||1;
+  const disp=document.getElementById('crashMulDisp');
+  if(disp){const m=parseFloat(disp.textContent);if(m>0)at=m}
   const win=Math.floor(staked*at);
-  // record cashout
   if(!gs.cashed)gs.cashed={};
   gs.cashed[me.username]={at,win};
-  // give money immediately via tx
   await changeCoinsTx(me.username, win);
   room.gameState=gs;updateRoom(inRoom,room);
   SFX.cashout();speak('Rút thành công '+at.toFixed(2)+' lần');
+  toast('Đã rút '+fmtVnd(win)+' @ '+at.toFixed(2)+'x');
+  if(me && typeof ensureUserExtras==='function'){
+    ensureUserExtras(me);
+    if(at>(me.stats.maxCrash||0))me.stats.maxCrash=at;
+    if(typeof pushHistory==='function') pushHistory('Crash', win-staked, at.toFixed(2)+'x');
+  }
   renderCrash(room);
 };
 
@@ -1830,45 +2360,69 @@ function renderMines(room){
   const gs=room.gameState||{};
   const gc=document.getElementById('gameContent');
   const isHost=room.host===me.username;
-  const myBet=(gs.bets&&gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  const myBetObj=gs.bets&&gs.bets[me.username];
+  const myBet=(myBetObj&&(myBetObj.main||myBetObj))|0 || (typeof myBetObj==='number'?myBetObj:0);
+  const minePos=Array.isArray(gs.minePos)?gs.minePos:Object.values(gs.minePos||{}).map(Number);
+  const revealed=Array.isArray(gs.revealed)?gs.revealed:Object.values(gs.revealed||{}).map(Number);
   let html=`<div class="tl-table"><div class="center-area">
     <div class="pname">💣 Mines — Dò mìn</div>
     <div style="font-size:14px;color:#9dbfa0;margin:6px 0">Hệ số hiện tại: <b style="color:var(--gold)">${(gs.multiplier||1).toFixed(2)}x</b> · Mìn: ${minesCount}</div>
   </div>`;
   html+=renderPlayersRingHtml(room,gs);
-  html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược rồi bắt đầu':gs.phase==='playing'?'Chọn ô an toàn — càng nhiều càng lời':'✅ Kết thúc'}</div></div>`;
-  html+=`<div class="center-area"><div class="bet-row">`;
-  CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${minesChipValue===v?' chip-selected':''}" onclick="minesSetChip(${v})">${chipLabel(v)}</div>`});
-  html+=`</div>`;
-  if(myBet)html+=`<div style="margin:6px 0;color:var(--gold)">Cược: ${fmtVnd(myBet)}</div>`;
-  html+=renderPublicBetsHtml(gs,'main');
-  // Grid 5x5
-  if(gs.phase==='playing'||gs.phase==='done'){
-    html+=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-width:280px;margin:12px auto">`;
-    for(let i=0;i<25;i++){
-      const rev=gs.revealed&&gs.revealed.includes(i);
-      const isMine=gs.minePos&&gs.minePos.includes(i);
-      let content='?',cls='';
-      if(gs.phase==='done'||rev){
-        if(isMine){content='💣';cls='style="background:#c0392b"'}
-        else {content='💎';cls='style="background:#27a85f"'}
-      }
-      const canClick=gs.phase==='playing'&&!rev&&gs.alive!==false&&myBet>0;
-      html+=`<div onclick="${canClick?`minesReveal(${i})`:''}" ${cls} style="width:48px;height:48px;border-radius:8px;background:#0d1f0f;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:${canClick?'pointer':'default'}">${content}</div>`;
-    }
-    html+=`</div>`;
-  }
+  html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược rồi bắt đầu':gs.phase==='playing'?(myBet>0?'Chọn ô an toàn — càng nhiều càng lời':'Bạn chưa đặt cược — không lật được'):'✅ Kết thúc'}</div></div>`;
+  html+=`<div class="center-area">`;
   if(gs.phase==='betting'){
+    html+=`<div class="bet-row">`;
+    CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${minesChipValue===v?' chip-selected':''}" onclick="minesSetChip(${v})">${chipLabel(v)}</div>`});
+    html+=`</div>`;
+    if(myBet)html+=`<div style="margin:6px 0;color:var(--gold)">Cược: ${fmtVnd(myBet)}</div>`;
+    html+=renderPublicBetsHtml(gs,'main');
     html+=`<div class="action-row"><button class="btn btn-gray" onclick="minesClear()">↺ Hủy</button>
       <button class="btn btn-gold" onclick="minesPlace()">Đặt ${chipLabel(minesChipValue)}</button>
       ${isHost?`<button class="btn btn-green" onclick="minesStart()">▶ Bắt đầu</button>`:''}</div>`;
-  } else if(gs.phase==='playing'&&myBet&&gs.alive!==false){
-    html+=`<div class="action-row"><button class="btn btn-gold" onclick="minesCashout()">💰 Rút ${(myBet*(gs.multiplier||1)|0).toLocaleString('vi-VN')}đ</button></div>`;
+  } else {
+    if(myBet)html+=`<div style="margin:6px 0;color:var(--gold);text-align:center">Cược: ${fmtVnd(myBet)}</div>`;
+    html+=renderPublicBetsHtml(gs,'main');
+  }
+  if(gs.phase==='playing'||gs.phase==='done'){
+    html+=`<div id="minesGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-width:300px;margin:14px auto;touch-action:manipulation">`;
+    for(let i=0;i<25;i++){
+      const rev=revealed.includes(i);
+      const isMine=minePos.includes(i);
+      let content='?', bg='#0d1f0f', border='var(--border)';
+      if(gs.phase==='done'||rev){
+        if(isMine){content='💣';bg='#c0392b';border='#e74c3c'}
+        else {content='💎';bg='#27a85f';border='#2ecc71'}
+      }
+      const canClick=gs.phase==='playing'&&!rev&&gs.alive!==false&&myBet>0;
+      html+=`<div class="mine-cell" data-idx="${i}" role="button"
+        style="width:52px;height:52px;border-radius:10px;background:${bg};border:2px solid ${border};display:flex;align-items:center;justify-content:center;font-size:22px;cursor:${canClick?'pointer':'default'};user-select:none;-webkit-tap-highlight-color:transparent;${canClick?'box-shadow:0 2px 8px #0005':''}"
+        >${content}</div>`;
+    }
+    html+=`</div>`;
+    if(gs.phase==='playing'&&myBet<=0){
+      html+=`<div style="text-align:center;color:#e74c3c;font-size:13px;margin-top:8px">Bạn chưa đặt cược ván này</div>`;
+    }
+  }
+  if(gs.phase==='playing'&&myBet>0&&gs.alive!==false){
+    html+=`<div class="action-row"><button class="btn btn-gold" onclick="minesCashout()">💰 Rút ${fmtVnd(Math.floor(myBet*(gs.multiplier||1)))}</button></div>`;
   } else if(gs.phase==='done'&&isHost){
     html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
   }
   html+=`</div></div>`;
   gc.innerHTML=html;
+  if(gs.phase==='playing'&&myBet>0&&gs.alive!==false){
+    const grid=document.getElementById('minesGrid');
+    if(grid){
+      grid.querySelectorAll('.mine-cell').forEach(cell=>{
+        const idx=parseInt(cell.getAttribute('data-idx'),10);
+        if(revealed.includes(idx))return;
+        const handler=(e)=>{e.preventDefault();e.stopPropagation();minesReveal(idx)};
+        cell.addEventListener('click',handler);
+        cell.addEventListener('touchend',handler,{passive:false});
+      });
+    }
+  }
 }
 window.minesSetChip=function(v){if(!canBetNow(getRoom(inRoom)))return;minesChipValue=v;SFX.click();const r=getRoom(inRoom);if(r)renderMines(r)};
 window.minesPlace=async function(){
@@ -1892,7 +2446,10 @@ window.minesClear=async function(){
 window.minesStart=function(){
   const room=getRoom(inRoom);if(!room||room.host!==me.username)return;
   const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
-  // place mines
+  const hasBet=Object.keys(gs.bets||{}).some(u=>{
+    const b=gs.bets[u];return (b&&(b.main||b))>0 || (typeof b==='number'&&b>0);
+  });
+  if(!hasBet){toast('Cần ít nhất 1 người đặt cược trước khi bắt đầu!');return}
   const pos=[];while(pos.length<minesCount){const p=Math.floor(Math.random()*25);if(!pos.includes(p))pos.push(p)}
   gs.minePos=pos;gs.revealed=[];gs.multiplier=1;gs.alive=true;gs.phase='playing';
   room.gameState=gs;updateRoom(inRoom,room);SFX.start();speak('Bắt đầu dò mìn');
@@ -1900,18 +2457,23 @@ window.minesStart=function(){
 window.minesReveal=function(idx){
   const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
   const gs=room.gameState;if(!gs||gs.phase!=='playing'||gs.alive===false)return;
-  if(gs.revealed&&gs.revealed.includes(idx))return;
-  if(!gs.revealed)gs.revealed=[];
-  gs.revealed.push(idx);
-  if(gs.minePos.includes(idx)){
+  const myBetObj=gs.bets&&gs.bets[me.username];
+  const myBet=(myBetObj&&(myBetObj.main||myBetObj))|0 || (typeof myBetObj==='number'?myBetObj:0);
+  if(myBet<=0){toast('Bạn chưa đặt cược!');return}
+  let revealed=Array.isArray(gs.revealed)?gs.revealed.slice():Object.values(gs.revealed||{}).map(Number);
+  let minePos=Array.isArray(gs.minePos)?gs.minePos:Object.values(gs.minePos||{}).map(Number);
+  if(revealed.includes(idx))return;
+  revealed.push(idx);
+  gs.revealed=revealed;
+  gs.minePos=minePos;
+  if(minePos.includes(idx)){
     gs.alive=false;gs.phase='done';
-    const staked=(gs.bets[me.username]&&gs.bets[me.username].main)||0;
-    gs.results={[me.username]:{net:-staked}};
+    gs.results={[me.username]:{net:-myBet}};
     SFX.explode();speak('Trúng mìn!');
     room.gameState=gs;updateRoom(inRoom,room);
+    if(typeof pushHistory==='function') pushHistory('Mines', -myBet, 'Trúng mìn');
   } else {
-    // increase multiplier roughly
-    const safe=25-minesCount;const opened=gs.revealed.filter(i=>!gs.minePos.includes(i)).length;
+    const opened=revealed.filter(i=>!minePos.includes(i)).length;
     gs.multiplier=+(1 + opened*0.35).toFixed(2);
     SFX.tick();
     room.gameState=gs;updateRoom(inRoom,room);
@@ -1921,14 +2483,21 @@ window.minesReveal=function(idx){
 window.minesCashout=async function(){
   const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
   const gs=room.gameState;if(!gs||gs.phase!=='playing'||gs.alive===false)return;
-  const staked=(gs.bets[me.username]&&gs.bets[me.username].main)||0;
+  const b=gs.bets&&gs.bets[me.username];
+  const staked=(b&&(b.main||b))|0 || (typeof b==='number'?b:0);
   if(staked<=0)return;
-  const win=Math.floor(staked*(gs.multiplier||1));
+  const mul=gs.multiplier||1;
+  const win=Math.floor(staked*mul);
   await changeCoinsTx(me.username,win);
   gs.results={[me.username]:{net:win-staked}};
   gs.phase='done';gs.alive=false;
   room.gameState=gs;updateRoom(inRoom,room);
   SFX.win();speak('Rút thành công');
+  if(me && typeof ensureUserExtras==='function'){
+    ensureUserExtras(me);
+    if(mul>(me.stats.maxMines||0))me.stats.maxMines=mul;
+    if(typeof pushHistory==='function') pushHistory('Mines', win-staked, mul.toFixed(2)+'x');
+  }
   renderMines(room);
 };
 
@@ -2184,6 +2753,406 @@ window.sendChat=function(){
 }
 document.getElementById('chatInp').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat()});
 
+
+
+// ======================================================
+// TOURNAMENT / GIẢI ĐẤU
+// ======================================================
+function showCreateTour(){
+  document.getElementById('mainMenu').style.display='none';
+  document.getElementById('createTour').style.display='block';
+}
+
+async function createTournament(){
+  if(!firebaseReady){toast('Đang kết nối máy chủ...');return}
+  const name=document.getElementById('tourName').value.trim();
+  const pass=document.getElementById('tourPass').value;
+  const gameType=document.getElementById('tourGame').value;
+  const max=parseInt(document.getElementById('tourMax').value)||6;
+  const rounds=parseInt(document.getElementById('tourRounds').value)||3;
+  const fee=parseInt(document.getElementById('tourFee').value)||0;
+  if(!name||!pass){showErr('tourErr','Điền tên và mật khẩu');return}
+  if(fee<1000){showErr('tourErr','Phí vào tối thiểu 1.000đ');return}
+  if((me.coins||0)<fee){showErr('tourErr','Không đủ tiền phí vào giải');return}
+  const ok=await changeCoinsTx(me.username, -fee);
+  if(!ok){showErr('tourErr','Không trừ được phí vào');return}
+  const id=genId();
+  const room={
+    id,name,pass,gameType,max,bet:0,host:me.username,
+    players:[me.username],spectators:[],status:'waiting',
+    gameState:null,chat:[],created:Date.now(),
+    tournament:{
+      active:true, fee, rounds, currentRound:0, pot:fee,
+      scores:{}, // username -> points
+      paid:[me.username],
+      finished:false, results:null
+    }
+  };
+  room.tournament.scores[me.username]=0;
+  updateRoom(id,room);
+  inRoom=id; enterRoom(id);
+  SFX.tour(); toast('Đã tạo giải · Quỹ: '+fmtVnd(fee));
+}
+
+// Khi join phòng tournament → thu phí
+const _origJoinRoom = null; // patched below via wrap
+
+async function tourPayEntry(room){
+  if(!room||!room.tournament||!room.tournament.active) return true;
+  const t=room.tournament;
+  if((t.paid||[]).includes(me.username)) return true;
+  const fee=t.fee||0;
+  if(fee<=0) return true;
+  if((me.coins||0)<fee){ toast('Cần '+fmtVnd(fee)+' để vào giải!'); return false; }
+  const ok=await changeCoinsTx(me.username, -fee);
+  if(!ok){ toast('Không trừ được phí vào giải'); return false; }
+  if(!t.paid) t.paid=[];
+  t.paid.push(me.username);
+  t.pot=(t.pot||0)+fee;
+  if(!t.scores) t.scores={};
+  t.scores[me.username]=0;
+  room.tournament=t;
+  updateRoom(inRoom, room);
+  toast('Đã nộp phí vào giải '+fmtVnd(fee)+' · Quỹ: '+fmtVnd(t.pot));
+  return true;
+}
+
+function tourAddScore(username, points){
+  const room=getRoom(inRoom); if(!room||!room.tournament) return;
+  const t=room.tournament;
+  if(!t.scores) t.scores={};
+  t.scores[username]=(t.scores[username]||0)+points;
+  room.tournament=t;
+  // host writes
+  if(room.host===me.username) updateRoom(inRoom, room);
+}
+
+function renderTourStandings(room){
+  const t=room.tournament; if(!t||!t.active) return '';
+  const users=getUsers();
+  const rows=Object.entries(t.scores||{}).sort((a,b)=>b[1]-a[1]);
+  let html=`<div class="tour-standings"><h4>🏆 BXH Giải · Vòng ${t.currentRound}/${t.rounds} · Quỹ ${fmtVnd(t.pot||0)}</h4>`;
+  rows.forEach(([u,pts],i)=>{
+    const name=(users[u]&&users[u].displayName)||u;
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
+    html+=`<div class="tour-row"><span>${medal} ${escHtml(name)}</span><b style="color:var(--gold)">${pts} điểm</b></div>`;
+  });
+  const isHost=room.host===me.username;
+  if(t.finished){
+    html+=`<div style="text-align:center;margin-top:8px;color:#27a85f;font-weight:700">✅ Giải đã kết thúc</div>`;
+  } else if(isHost && room.status==='waiting'){
+    if(t.currentRound < t.rounds){
+      html+=`<div class="action-row" style="margin-top:10px"><button class="btn btn-gold" onclick="tourStartRound()">▶ Bắt đầu vòng ${t.currentRound+1}</button></div>`;
+    } else {
+      html+=`<div class="action-row" style="margin-top:10px"><button class="btn btn-gold" onclick="tourFinish()">🏁 Kết thúc & chia thưởng</button></div>`;
+    }
+  } else if(!isHost && room.status==='waiting'){
+    html+=`<div style="text-align:center;font-size:12px;color:#9dbfa0;margin-top:6px">Chờ chủ giải bắt đầu vòng...</div>`;
+  }
+  html+=`</div>`;
+  return html;
+}
+
+function tourStartRound(){
+  const room=getRoom(inRoom);
+  if(!room||room.host!==me.username||!room.tournament) return;
+  const t=room.tournament;
+  if(t.currentRound >= t.rounds){ toast('Đã hết vòng — hãy kết thúc giải'); return; }
+  t.currentRound++;
+  room.tournament=t;
+  updateRoom(inRoom, room);
+  SFX.start(); speak('Vòng '+t.currentRound);
+  // Kick off the underlying game
+  startGame();
+}
+
+function tourOnRoundEnd(results){
+  // results: {username: {net}} — convert net to points
+  const room=getRoom(inRoom);
+  if(!room||!room.tournament||!room.tournament.active||room.host!==me.username) return;
+  const t=room.tournament;
+  if(!t.scores) t.scores={};
+  Object.keys(results||{}).forEach(u=>{
+    const net=results[u].net||0;
+    // points: win +2, draw +1, lose 0; bonus for big wins
+    let pts=0;
+    if(net>0) pts=2+(net>=50000?1:0);
+    else if(net===0) pts=1;
+    t.scores[u]=(t.scores[u]||0)+pts;
+  });
+  delete t._scoring;
+  room.tournament=t;
+  room.status='waiting';
+  room.gameState=null;
+  updateRoom(inRoom, room);
+  SFX.levelup();
+  toast('Hết vòng '+t.currentRound+'/'+t.rounds);
+  if(t.currentRound >= t.rounds){
+    setTimeout(()=>{ if(confirm('Đã hết vòng. Kết thúc giải và chia thưởng?')) tourFinish(); }, 600);
+  }
+}
+
+async function tourFinish(){
+  const room=getRoom(inRoom);
+  if(!room||room.host!==me.username||!room.tournament) return;
+  const t=room.tournament;
+  if(t.finished) return;
+  const pot=t.pot||0;
+  const ranking=Object.entries(t.scores||{}).sort((a,b)=>b[1]-a[1]);
+  const prizes={};
+  if(ranking.length>=1) prizes[ranking[0][0]]=Math.floor(pot*0.6);
+  if(ranking.length>=2) prizes[ranking[1][0]]=Math.floor(pot*0.3);
+  if(ranking.length>=3) prizes[ranking[2][0]]=Math.floor(pot*0.1);
+  // remainder to 1st
+  const given=Object.values(prizes).reduce((a,b)=>a+b,0);
+  if(ranking.length>=1 && pot-given>0) prizes[ranking[0][0]]+=(pot-given);
+
+  for(const [u,amt] of Object.entries(prizes)){
+    if(amt>0) await changeCoinsTx(u, amt);
+  }
+  t.finished=true; t.results=prizes; t.active=true;
+  room.tournament=t;
+  room.status='waiting';
+  room.gameState=null;
+  updateRoom(inRoom, room);
+  SFX.tour();
+  const users=getUsers();
+  let msg='🏆 Kết quả giải:\n';
+  ranking.slice(0,3).forEach(([u,pts],i)=>{
+    const name=(users[u]&&users[u].displayName)||u;
+    const prize=prizes[u]||0;
+    msg+=(i===0?'🥇 ':i===1?'🥈 ':'🥉 ')+name+': '+pts+'đ · thưởng '+fmtVnd(prize)+'\n';
+  });
+  toast(msg.replace(/\n/g,' · '), 5000);
+  speak('Giải đấu kết thúc');
+  if(typeof pushHistory==='function' && prizes[me.username]){
+    pushHistory('Tournament', prizes[me.username], 'Hạng '+(ranking.findIndex(x=>x[0]===me.username)+1));
+  }
+}
+
+// Patch joinRoom to collect tour fee — wrap after definition by replacing key section
+// We'll hook in enterRoom instead after join succeeds via tourPayEntry call
+
+// ======================================================
+// TÍNH NĂNG: Xếp hạng · Điểm danh · Hồ sơ · Lịch sử · Bạn bè · Thành tựu
+// ======================================================
+const AVATAR_LIST=['🦁','🐯','🐻','🦊','🐼','🐸','🐨','🦅','🐶','🐱','🐵','🐷','🐮','🐹','🐰','🦄','🐲','🐺','🐙','🦋'];
+const FRAME_LIST=[
+  {id:'none',name:'Không',css:''},
+  {id:'gold',name:'Vàng',css:'box-shadow:0 0 0 3px #f0c030'},
+  {id:'fire',name:'Lửa',css:'box-shadow:0 0 0 3px #e74c3c,0 0 12px #e74c3c88'},
+  {id:'ice',name:'Băng',css:'box-shadow:0 0 0 3px #3498db,0 0 12px #3498db88'},
+  {id:'rainbow',name:'Cầu vồng',css:'box-shadow:0 0 0 3px #9b59b6,0 0 12px #9b59b688'}
+];
+const ACHIEVEMENTS=[
+  {id:'first_win',name:'Chiến thắng đầu tiên',desc:'Thắng 1 ván bất kỳ',icon:'🥇'},
+  {id:'rich',name:'Đại gia',desc:'Đạt 1.000.000đ',icon:'💎'},
+  {id:'whale',name:'Cá voi',desc:'Đạt 10.000.000đ',icon:'🐋'},
+  {id:'daily3',name:'Chăm chỉ',desc:'Điểm danh 3 ngày',icon:'📅'},
+  {id:'crash_hero',name:'Phi công',desc:'Rút Crash ≥ 5x',icon:'✈️'},
+  {id:'mines_safe',name:'Thợ mìn',desc:'Rút Mines ≥ 3x',icon:'💣'},
+  {id:'social',name:'Hòa đồng',desc:'Kết bạn 3 người',icon:'🤝'},
+  {id:'gambler',name:'Con bạc',desc:'Chơi 20 ván',icon:'🎰'}
+];
+
+function closeFeatureModal(){ document.getElementById('featureModal').className='modal'; }
+function openFeature(title, bodyHtml){
+  document.getElementById('featTitle').textContent=title;
+  document.getElementById('featBody').innerHTML=bodyHtml;
+  document.getElementById('featureModal').className='modal show';
+}
+function ensureUserExtras(u){
+  if(!u)return u;
+  if(!u.avatar)u.avatar=avatarFor(u.username);
+  if(!u.frame)u.frame='none';
+  if(!u.title)u.title='';
+  if(!u.friends)u.friends=[];
+  if(!u.history)u.history=[];
+  if(!u.achievements)u.achievements={};
+  if(!u.stats)u.stats={wins:0,games:0,checkins:0,maxCrash:0,maxMines:0};
+  return u;
+}
+function saveMe(){
+  if(!me)return;
+  const users=getUsers();
+  users[me.username]=me;
+  saveUsers(users);
+}
+function pushHistory(game, net, detail){
+  if(!me)return;
+  ensureUserExtras(me);
+  me.history.unshift({game,net,detail,t:Date.now()});
+  if(me.history.length>30)me.history=me.history.slice(0,30);
+  me.stats.games=(me.stats.games||0)+1;
+  if(net>0)me.stats.wins=(me.stats.wins||0)+1;
+  checkAchievements();
+  saveMe();
+}
+function checkAchievements(){
+  if(!me)return;
+  ensureUserExtras(me);
+  const a=me.achievements, s=me.stats||{};
+  let unlocked=[];
+  if(s.wins>=1&&!a.first_win){a.first_win=Date.now();unlocked.push('first_win')}
+  if((me.coins||0)>=1000000&&!a.rich){a.rich=Date.now();unlocked.push('rich')}
+  if((me.coins||0)>=10000000&&!a.whale){a.whale=Date.now();unlocked.push('whale')}
+  if((s.checkins||0)>=3&&!a.daily3){a.daily3=Date.now();unlocked.push('daily3')}
+  if((s.maxCrash||0)>=5&&!a.crash_hero){a.crash_hero=Date.now();unlocked.push('crash_hero')}
+  if((s.maxMines||0)>=3&&!a.mines_safe){a.mines_safe=Date.now();unlocked.push('mines_safe')}
+  if((me.friends||[]).length>=3&&!a.social){a.social=Date.now();unlocked.push('social')}
+  if((s.games||0)>=20&&!a.gambler){a.gambler=Date.now();unlocked.push('gambler')}
+  if(unlocked.length){
+    unlocked.forEach(id=>{
+      const def=ACHIEVEMENTS.find(x=>x.id===id);
+      if(def)toast('🏅 Mở khóa: '+def.name);
+    });
+    saveMe();
+  }
+}
+function showLeaderboard(){
+  const users=getUsers();
+  const list=Object.values(users).filter(u=>u&&u.username!==ADMIN_USER).sort((a,b)=>(b.coins||0)-(a.coins||0)).slice(0,20);
+  let html=`<div style="font-size:12px;color:#9dbfa0;text-align:center;margin-bottom:10px">Top 20 theo số dư VND</div>`;
+  if(!list.length)html+=`<p style="text-align:center;color:#9dbfa0">Chưa có dữ liệu</p>`;
+  list.forEach((u,i)=>{
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.';
+    const av=u.avatar||avatarFor(u.username);
+    const meMark=me&&u.username===me.username?' · bạn':'';
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#0d1f0f;border-radius:10px;margin-bottom:6px;border:1px solid ${meMark?'var(--gold)':'var(--border)'}">
+      <span style="width:28px;font-weight:900;color:var(--gold)">${medal}</span>
+      <span style="font-size:22px">${av}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(u.displayName||u.username)}${meMark}</div>
+        <div style="font-size:11px;color:#9dbfa0">${u.title?escHtml(u.title):'—'}</div>
+      </div>
+      <div style="font-weight:700;color:var(--gold);font-size:13px">💰 ${fmtVnd(u.coins||0)}</div>
+    </div>`;
+  });
+  openFeature('🏆 Bảng xếp hạng', html);
+}
+function claimDaily(){
+  if(!me){toast('Hãy đăng nhập');return}
+  ensureUserExtras(me);
+  const today=new Date().toISOString().slice(0,10);
+  if(me.lastCheckin===today){toast('Hôm nay bạn đã điểm danh rồi!');return}
+  const streak=(me.lastCheckin && (Date.now()-new Date(me.lastCheckin).getTime()<2*864e5))?((me.checkinStreak||0)+1):1;
+  const reward=20000+Math.min(streak*5000,50000);
+  me.lastCheckin=today;me.checkinStreak=streak;
+  me.stats.checkins=(me.stats.checkins||0)+1;
+  changeCoinsTx(me.username, reward).then(ok=>{
+    if(ok){toast(`🎁 +${fmtVnd(reward)} (chuỗi ${streak} ngày)`);speak('Nhận thưởng thành công');checkAchievements();saveMe();refreshMyCoin();}
+    else toast('Lỗi nhận thưởng');
+  });
+}
+function showProfile(){
+  if(!me)return;ensureUserExtras(me);
+  let html=`<div style="text-align:center;margin-bottom:14px">
+    <div id="profAvatarPrev" style="font-size:56px;margin:8px auto;width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1f0f;${(FRAME_LIST.find(f=>f.id===me.frame)||FRAME_LIST[0]).css}">${me.avatar||'👤'}</div>
+    <div style="font-weight:700;color:var(--gold);font-size:16px">${escHtml(me.displayName)}</div>
+    <div style="font-size:12px;color:#9dbfa0">@${escHtml(me.username)} ${me.title?'· '+escHtml(me.title):''}</div>
+    <div style="margin-top:6px;color:var(--gold)">💰 ${fmtVnd(me.coins||0)}</div>
+  </div>
+  <div style="font-size:13px;color:var(--gold);margin-bottom:6px">Chọn avatar</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+  AVATAR_LIST.forEach(a=>{
+    html+=`<button onclick="setMyAvatar('${a}')" style="font-size:24px;padding:6px;border-radius:10px;border:2px solid ${me.avatar===a?'var(--gold)':'var(--border)'};background:#0d1f0f;cursor:pointer">${a}</button>`;
+  });
+  html+=`</div><div style="font-size:13px;color:var(--gold);margin-bottom:6px">Khung tên</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+  FRAME_LIST.forEach(f=>{
+    html+=`<button onclick="setMyFrame('${f.id}')" class="btn btn-sm ${me.frame===f.id?'btn-gold':'btn-gray'}" style="margin:0;width:auto">${f.name}</button>`;
+  });
+  html+=`</div><div style="font-size:13px;color:var(--gold);margin-bottom:6px">Danh hiệu</div>
+  <input class="inp" id="titleInp" placeholder="VD: Vua Bầu Cua" value="${escHtml(me.title||'')}" maxlength="20"/>
+  <button class="btn btn-sm btn-green" onclick="setMyTitle()">Lưu danh hiệu</button>
+  <div style="margin-top:12px;font-size:12px;color:#9dbfa0;text-align:center">Thắng: ${me.stats.wins||0} · Ván: ${me.stats.games||0} · Điểm danh: ${me.stats.checkins||0}</div>`;
+  openFeature('👤 Hồ sơ', html);
+}
+window.setMyAvatar=function(a){
+  if(!me)return;ensureUserExtras(me);me.avatar=a;saveMe();
+  const prev=document.getElementById('profAvatarPrev');if(prev)prev.textContent=a;
+  document.getElementById('myTag').textContent=(me.avatar||'👤')+' '+me.displayName;
+  SFX.click();toast('Đã đổi avatar');
+};
+window.setMyFrame=function(id){if(!me)return;ensureUserExtras(me);me.frame=id;saveMe();showProfile();SFX.click();};
+window.setMyTitle=function(){
+  if(!me)return;ensureUserExtras(me);
+  const t=(document.getElementById('titleInp').value||'').trim().slice(0,20);
+  me.title=t;saveMe();toast(t?'Đã lưu danh hiệu':'Đã xóa danh hiệu');showProfile();
+};
+function showHistory(){
+  if(!me)return;ensureUserExtras(me);
+  const h=me.history||[];
+  let html=`<div style="font-size:12px;color:#9dbfa0;text-align:center;margin-bottom:10px">30 ván gần nhất</div>`;
+  if(!h.length)html+=`<p style="text-align:center;color:#9dbfa0">Chưa có lịch sử — chơi vài ván rồi quay lại</p>`;
+  h.forEach(item=>{
+    const col=item.net>0?'#27a85f':item.net<0?'#e74c3c':'var(--gold)';
+    const sign=item.net>0?'+':'';
+    const time=new Date(item.t).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
+    html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#0d1f0f;border-radius:8px;margin-bottom:5px;font-size:13px">
+      <div><b style="color:var(--gold)">${escHtml(item.game||'?')}</b><div style="font-size:11px;color:#9dbfa0">${time}${item.detail?' · '+escHtml(item.detail):''}</div></div>
+      <div style="font-weight:900;color:${col}">${sign}${fmtVnd(item.net)}</div>
+    </div>`;
+  });
+  openFeature('📜 Lịch sử ván chơi', html);
+}
+function showFriends(){
+  if(!me)return;ensureUserExtras(me);
+  const users=getUsers();
+  let html=`<div style="display:flex;gap:6px;margin-bottom:12px">
+    <input class="inp" id="friendInp" placeholder="Tên đăng nhập bạn bè" style="margin:0;flex:1"/>
+    <button class="btn btn-sm btn-gold" style="margin:0" onclick="addFriend()">Thêm</button>
+  </div>`;
+  const fl=me.friends||[];
+  if(!fl.length)html+=`<p style="text-align:center;color:#9dbfa0;font-size:13px">Chưa có bạn bè</p>`;
+  fl.forEach(uname=>{
+    const u=users[uname]||{displayName:uname,coins:0};
+    html+=`<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#0d1f0f;border-radius:8px;margin-bottom:5px">
+      <span style="font-size:22px">${u.avatar||avatarFor(uname)}</span>
+      <div style="flex:1"><b style="color:var(--gold)">${escHtml(u.displayName||uname)}</b>
+        <div style="font-size:11px;color:#9dbfa0">💰 ${fmtVnd(u.coins||0)}</div></div>
+      <button class="btn btn-sm btn-green" style="margin:0" onclick="inviteFriend('${uname}')">Mời</button>
+      <button class="btn btn-sm btn-red" style="margin:0" onclick="removeFriend('${uname}')">Xóa</button>
+    </div>`;
+  });
+  html+=`<p style="font-size:11px;color:#6a9a70;margin-top:10px">Mời = copy ID phòng hiện tại (nếu đang trong phòng)</p>`;
+  openFeature('👥 Bạn bè', html);
+}
+window.addFriend=function(){
+  if(!me)return;ensureUserExtras(me);
+  const name=(document.getElementById('friendInp').value||'').trim();
+  if(!name){toast('Nhập tên đăng nhập');return}
+  if(name===me.username){toast('Không thể tự kết bạn');return}
+  const users=getUsers();
+  if(!users[name]){toast('Không tìm thấy tài khoản');return}
+  if(me.friends.includes(name)){toast('Đã là bạn bè');return}
+  me.friends.push(name);checkAchievements();saveMe();toast('Đã thêm '+name);showFriends();
+};
+window.removeFriend=function(uname){
+  if(!me)return;ensureUserExtras(me);
+  me.friends=(me.friends||[]).filter(x=>x!==uname);saveMe();showFriends();
+};
+window.inviteFriend=function(uname){
+  if(inRoom){
+    const text=`Vào phòng ID: ${inRoom} — Game Bài Online`;
+    if(navigator.clipboard)navigator.clipboard.writeText(text).catch(()=>{});
+    toast('Đã copy ID phòng '+inRoom+' — gửi cho '+uname);
+  } else toast('Hãy vào một phòng trước rồi bấm Mời');
+};
+function showAchievements(){
+  if(!me)return;ensureUserExtras(me);
+  let html=`<div style="font-size:12px;color:#9dbfa0;text-align:center;margin-bottom:10px">Sưu tầm danh hiệu khi chơi</div>`;
+  ACHIEVEMENTS.forEach(def=>{
+    const got=!!(me.achievements&&me.achievements[def.id]);
+    html+=`<div style="display:flex;gap:10px;padding:10px;background:#0d1f0f;border-radius:10px;margin-bottom:6px;opacity:${got?1:0.45};border:1px solid ${got?'var(--gold)':'var(--border)'}">
+      <span style="font-size:28px">${def.icon}</span>
+      <div><div style="font-weight:700;color:var(--gold)">${def.name} ${got?'✅':''}</div>
+        <div style="font-size:12px;color:#9dbfa0">${def.desc}</div></div>
+    </div>`;
+  });
+  openFeature('🏅 Thành tựu', html);
+}
+
+
 // ======================================================
 // MISC
 // ======================================================
@@ -2197,7 +3166,7 @@ function closeResult(){document.getElementById('resultModal').className='modal'}
 
 // Keyboard shortcut
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeAdmin();closeResult()}
+  if(e.key==='Escape'){closeAdmin();closeResult();if(typeof closeFeatureModal==='function')closeFeatureModal()}
 });
 
 // Pulse CSS inject
