@@ -1172,20 +1172,32 @@ function renderTaiXiu(room){
 
   let html=`<div class="tl-table">`;
   html+=`<div class="center-area"><div class="pname" style="margin-bottom:10px">🎲 Tài Xỉu</div><div class="bc-dice-row">`;
+  // Mặt xúc xắc Unicode: 1→⚀ … 6→⚅
+  const DICE_FACE=['','⚀','⚁','⚂','⚃','⚄','⚅'];
+  let diceArr=[];
+  if(Array.isArray(gs.dice)&&gs.dice.length>=3){
+    diceArr=[Number(gs.dice[0]),Number(gs.dice[1]),Number(gs.dice[2])];
+  } else if(gs.d1!=null){
+    diceArr=[Number(gs.d1),Number(gs.d2),Number(gs.d3)];
+  } else if(gs.dice&&typeof gs.dice==='object'){
+    diceArr=[Number(gs.dice[0]||gs.dice['0']),Number(gs.dice[1]||gs.dice['1']),Number(gs.dice[2]||gs.dice['2'])];
+  }
   for(let i=0;i<3;i++){
     if(gs.phase==='rolling'){
       html+=`<div class="bc-dice bc-rolling">🎲</div>`;
-    } else if(gs.phase==='done'&&gs.dice){
-      html+=`<div class="bc-dice bc-reveal">${gs.dice[i]}</div>`;
+    } else if((gs.phase==='done'||gs.phase==='reveal')&&diceArr[i]>=1&&diceArr[i]<=6){
+      const n=diceArr[i];
+      html+=`<div class="bc-dice bc-reveal" title="${n}">${DICE_FACE[n]}</div>`;
     } else {
       html+=`<div class="bc-dice">❔</div>`;
     }
   }
   html+=`</div>`;
-  if(gs.phase==='done'&&gs.sum!=null){
+  if((gs.phase==='done'||gs.phase==='reveal')&&gs.sum!=null){
     const isTai=gs.sum>=11;
     const isChan=gs.sum%2===0;
-    html+=`<div style="margin-top:8px;font-size:15px;font-weight:700;color:var(--gold)">Tổng: ${gs.sum} → ${isTai?'Tài':'Xỉu'} · ${isChan?'Chẵn':'Lẻ'}</div>`;
+    const detail=diceArr.length===3?` (${diceArr[0]}+${diceArr[1]}+${diceArr[2]})`:'';
+    html+=`<div style="margin-top:8px;font-size:15px;font-weight:700;color:var(--gold)">Tổng: ${gs.sum}${detail} → ${isTai?'Tài':'Xỉu'} · ${isChan?'Chẵn':'Lẻ'}</div>`;
   }
   html+=`</div>`;
 
@@ -1276,8 +1288,11 @@ window.txRoll=function(){
   const gs=room.gameState;
   if(!gs||gs.phase!=='betting')return;
   SFX.roll();
-  const dice=[1,2,3].map(()=>Math.floor(Math.random()*6)+1);
-  const sum=dice[0]+dice[1]+dice[2];
+  // 3 xúc xắc độc lập, mỗi cái 1–6 (tránh lỗi mảng / Firebase)
+  function rollOne(){return Math.floor(Math.random()*6)+1}
+  const d1=rollOne(), d2=rollOne(), d3=rollOne();
+  const dice=[d1,d2,d3];
+  const sum=d1+d2+d3;
   const isTai=sum>=11;
   const isChan=sum%2===0;
   const winners={tai:isTai,xiu:!isTai,chan:isChan,le:!isChan};
@@ -1300,14 +1315,24 @@ window.txRoll=function(){
   });
   if(users[hostUser])users[hostUser].coins=Math.max(0,(users[hostUser].coins||0)+hostDelta);
   saveUsers(users);
-  gs.dice=dice;gs.sum=sum;gs.results=results;gs.phase='rolling';
-  room.gameState=gs;updateRoom(inRoom,room);
+  // Lưu rõ từng mặt (Firebase đôi khi làm lệch mảng)
+  gs.dice=[d1,d2,d3];
+  gs.d1=d1;gs.d2=d2;gs.d3=d3;
+  gs.sum=sum;
+  gs.results=results;
+  gs.phase='rolling';
+  room.gameState=gs;
+  updateRoom(inRoom,room);
   const myNetTx=results[me.username]?.net;
   setTimeout(()=>{
     if(myNetTx>0)SFX.win();else if(myNetTx<0)SFX.lose();
     const r2=getRoom(inRoom);
-    if(!r2||r2.gameState?.phase!=='rolling')return;
+    if(!r2||!r2.gameState||r2.gameState.phase!=='rolling')return;
+    // Giữ nguyên dice khi chuyển sang done
     r2.gameState.phase='done';
+    if(!r2.gameState.dice||!r2.gameState.dice.length){
+      r2.gameState.dice=[r2.gameState.d1,r2.gameState.d2,r2.gameState.d3];
+    }
     updateRoom(inRoom,r2);
   },1800);
 }
