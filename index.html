@@ -131,7 +131,35 @@ select.inp{appearance:none}
 .chip.c10000{background:#8e44ad;color:#fff}
 .chip.c50000{background:#e67e22;color:#fff}
 .chip.c100000{background:#1abc9c;color:#fff}
+.chip.c200000{background:#c0392b;color:#fff;font-size:10px}
+.chip.c500000{background:#8e44ad;color:#fff;font-size:10px;box-shadow:0 0 10px #9b59b688}
 .bet-display{font-size:22px;font-weight:900;color:var(--gold);margin:0 10px}
+
+/* ===== ĐÁ GÀ REALISTIC ===== */
+.daga-arena{position:relative;width:100%;max-width:520px;margin:0 auto 12px;background:linear-gradient(180deg,#3a2a1a 0%,#1a120a 100%);border:3px solid #5a4030;border-radius:16px;padding:16px 12px 20px;box-shadow:inset 0 0 40px #0008,0 8px 24px #0006;overflow:hidden}
+.daga-arena::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 40%,#0006 100%);pointer-events:none}
+.daga-floor{position:absolute;bottom:0;left:0;right:0;height:28%;background:linear-gradient(180deg,#5a4030 0%,#3a2a1a 100%);border-top:2px solid #7a5a40;opacity:.9}
+.daga-fighters{display:flex;justify-content:space-around;align-items:flex-end;gap:8px;position:relative;z-index:2;min-height:160px}
+.daga-rooster{display:flex;flex-direction:column;align-items:center;transition:transform .25s ease}
+.daga-rooster img{width:110px;height:110px;object-fit:cover;border-radius:12px;border:3px solid #fff3;box-shadow:0 6px 18px #0007;background:#1a120a}
+.daga-rooster.side-a img{border-color:#e74c3c;filter:saturate(1.15) contrast(1.05)}
+.daga-rooster.side-b img{border-color:#3498db;filter:hue-rotate(190deg) saturate(1.2) contrast(1.05)}
+.daga-rooster .daga-label{margin-top:6px;font-size:13px;font-weight:900;padding:3px 12px;border-radius:8px;letter-spacing:1px}
+.daga-rooster.side-a .daga-label{background:#c0392b;color:#fff}
+.daga-rooster.side-b .daga-label{background:#2980b9;color:#fff}
+.daga-vs{font-size:28px;font-weight:900;color:var(--gold);align-self:center;text-shadow:0 0 12px #f0c03088;z-index:3}
+.daga-rooster.idle{animation:dagaIdle 1.8s ease-in-out infinite}
+.daga-rooster.fighting{animation:dagaFight 0.35s ease-in-out infinite}
+.daga-rooster.winner{animation:dagaWin 0.6s ease 3;filter:drop-shadow(0 0 12px #f0c030)}
+.daga-rooster.loser{animation:dagaLose 0.8s ease forwards;opacity:.55;filter:grayscale(.6)}
+@keyframes dagaIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes dagaFight{0%{transform:translateX(0) rotate(0)}25%{transform:translateX(12px) rotate(4deg)}50%{transform:translateX(-8px) rotate(-3deg)}75%{transform:translateX(10px) rotate(2deg)}100%{transform:translateX(0)}}
+@keyframes dagaWin{0%,100%{transform:scale(1)}40%{transform:scale(1.12) translateY(-10px)}70%{transform:scale(1.05)}}
+@keyframes dagaLose{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(20px) rotate(-12deg) scale(.9)}}
+.daga-impact{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:42px;opacity:0;pointer-events:none;z-index:5}
+.daga-impact.show{animation:dagaBoom .5s ease}
+@keyframes dagaBoom{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}}
+@media(max-width:500px){.daga-rooster img{width:80px;height:80px}.daga-fighters{min-height:130px}}
 .status-msg{font-size:16px;font-weight:700;margin:10px 0;min-height:28px;color:var(--gold)}
 .pot-display{font-size:14px;color:#9dbfa0;margin-bottom:8px}
 .result-badge{font-size:20px;font-weight:900;margin-top:6px;min-height:28px}
@@ -1118,7 +1146,7 @@ const BC_SYMBOLS=[
   {id:'ga',icon:'🐓',name:'Gà'},
   {id:'nai',icon:'🦌',name:'Nai'}
 ];
-const CHIP_VALUES=[1000,5000,10000,50000,100000];
+const CHIP_VALUES=[1000,5000,10000,50000,100000,200000,500000];
 function chipLabel(v){
   if(v>=1000000)return (v/1000000)+'M';
   if(v>=1000)return (v/1000)+'K';
@@ -1510,21 +1538,39 @@ function renderXidach(room){
     if(isHost) html += `<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
     else html += `<div style="color:#9dbfa0;font-size:13px;margin-top:8px">Chờ nhà cái bắt đầu ván mới...</div>`;
   }
-  if(phase !== 'betting' && turnOrder.length){
-    html += `<div style="margin-top:16px;width:100%"><div class="pname" style="margin-bottom:8px">Bài người chơi</div>
+  // Chỉ hiện bài người khác khi ván xong. Đang chơi: chỉ thấy bài của mình (đã hiện phía trên).
+  if(phase === 'done' && turnOrder.length){
+    html += `<div style="margin-top:16px;width:100%"><div class="pname" style="margin-bottom:8px">Bài tất cả người chơi</div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">`;
     turnOrder.forEach(p => {
       const h = hands[p] || [];
       const score = bjHandScore(h);
       const u = users[p] || {displayName: p};
-      const isCur = phase === 'playing' && p === currentPlayer;
-      html += `<div style="background:#0d1f0f66;border:2px solid ${isCur ? 'var(--gold)' : 'var(--border)'};border-radius:12px;padding:10px;min-width:100px;text-align:center">
-        <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px">${escHtml(u.displayName)}${isCur ? ' ←' : ''}</div>
+      const res = (gs.results && gs.results[p]) || null;
+      html += `<div style="background:#0d1f0f66;border:2px solid var(--border);border-radius:12px;padding:10px;min-width:100px;text-align:center">
+        <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px">${escHtml(u.displayName)}</div>
         <div class="mini-cards">${h.map(c => {
           const red = bjIsRed(c) ? ' red-card' : '';
           return `<div class="mini-card${red}">${c.slice(0,-1)}${c.slice(-1)}</div>`;
         }).join('')}</div>
         <div class="score-badge">${score > 21 ? 'QUẮC' : score + ' điểm'}</div>
+        ${res ? `<div style="font-size:11px;margin-top:4px;color:${res.net>0?'#27a85f':res.net<0?'#e74c3c':'var(--gold)'}">${res.net>0?'+':''}${fmtVnd(res.net)}</div>` : ''}
+      </div>`;
+    });
+    html += `</div></div>`;
+  } else if((phase === 'playing' || phase === 'dealer') && turnOrder.length){
+    // Chỉ hiện tên + số lá (úp), không lộ bài
+    html += `<div style="margin-top:14px;width:100%"><div class="pname" style="margin-bottom:8px;font-size:13px">Người chơi khác</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">`;
+    turnOrder.forEach(p => {
+      if(p === me.username) return;
+      const h = hands[p] || [];
+      const u = users[p] || {displayName: p};
+      const isCur = phase === 'playing' && p === currentPlayer;
+      html += `<div style="background:#0d1f0f66;border:2px solid ${isCur ? 'var(--gold)' : 'var(--border)'};border-radius:12px;padding:8px 12px;min-width:90px;text-align:center">
+        <div style="font-size:12px;color:var(--gold);font-weight:700">${escHtml(u.displayName)}${isCur ? ' ←' : ''}</div>
+        <div class="mini-cards" style="margin-top:4px">${h.map(() => `<div class="mini-card hidden-card">🂠</div>`).join('')}</div>
+        <div class="score-badge">${h.length} lá</div>
       </div>`;
     });
     html += `</div></div>`;
@@ -2253,8 +2299,10 @@ window.crashCashout=async function(){
 };
 
 // ======================================================
-// ĐÁ GÀ ẢO
+// ĐÁ GÀ ẢO — Gà A vs Gà B (không hòa) + ảnh thật
 // ======================================================
+// Đặt file rooster.jpg cùng thư mục với index.html (ảnh bạn gửi)
+const DAGA_ROOSTER_IMG = 'rooster.jpg';
 let dagaChipValue=1000;
 function startDaGa(room,users){
   room.status='playing';
@@ -2266,44 +2314,113 @@ function renderDaGa(room){
   const gc=document.getElementById('gameContent');
   const isHost=room.host===me.username;
   const myBets=(gs.bets&&gs.bets[me.username])||{};
-  let html=`<div class="tl-table"><div class="center-area">
-    <div class="pname" style="margin-bottom:10px">🐓 Đá Gà Ảo</div>
-    <div class="bc-dice-row">
-      <div class="bc-dice" style="font-size:40px">${gs.phase==='fighting'?'⚔️':gs.phase==='done'?(gs.winner==='do'?'🔴':'🟢'):'🐓'}</div>
-      <div style="font-size:22px;color:var(--gold);align-self:center">VS</div>
-      <div class="bc-dice" style="font-size:40px">${gs.phase==='fighting'?'⚔️':gs.phase==='done'?(gs.winner==='xanh'?'🟢':'🔴'):'🐓'}</div>
+  const phase=gs.phase||'betting';
+  const win=gs.winner;
+
+  // Class trạng thái cho từng gà
+  let clsA='idle', clsB='idle';
+  if(phase==='fighting'){ clsA='fighting'; clsB='fighting'; }
+  else if(phase==='done'){
+    if(win==='a'){ clsA='winner'; clsB='loser'; }
+    else { clsA='loser'; clsB='winner'; }
+  }
+
+  let html=`<div class="tl-table">
+  <div class="center-area" style="padding-bottom:8px">
+    <div class="pname" style="margin-bottom:10px">🐓 Đá Gà — Gà A vs Gà B</div>
+    <div class="daga-arena">
+      <div class="daga-floor"></div>
+      <div class="daga-fighters">
+        <div class="daga-rooster side-a ${clsA}">
+          <img src="${DAGA_ROOSTER_IMG}" alt="Gà A" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+          <div style="display:none;width:110px;height:110px;align-items:center;justify-content:center;font-size:64px;background:#1a120a;border-radius:12px">🐓</div>
+          <div class="daga-label">GÀ A</div>
+        </div>
+        <div class="daga-vs">${phase==='fighting'?'⚔️':'VS'}</div>
+        <div class="daga-rooster side-b ${clsB}">
+          <img src="${DAGA_ROOSTER_IMG}" alt="Gà B" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+          <div style="display:none;width:110px;height:110px;align-items:center;justify-content:center;font-size:64px;background:#1a120a;border-radius:12px">🐓</div>
+          <div class="daga-label">GÀ B</div>
+        </div>
+      </div>
+      <div class="daga-impact" id="dagaImpact">💥</div>
     </div>
-    <div style="margin-top:8px;font-size:15px;font-weight:700;color:var(--gold)">${gs.phase==='done'?(gs.winner==='do'?'🔴 Gà Đỏ thắng!':gs.winner==='xanh'?'🟢 Gà Xanh thắng!':'🤝 Hòa'):gs.phase==='fighting'?'Đang đá...':'Chọn cửa đặt cược'}</div>
+    <div style="margin-top:10px;font-size:16px;font-weight:800;color:var(--gold)">
+      ${phase==='done'
+        ? (win==='a' ? '🏆 Gà A thắng!' : '🏆 Gà B thắng!')
+        : phase==='fighting' ? '⚔️ Đang đá nhau...' : 'Chọn Gà A hoặc Gà B để đặt cược'}
+    </div>
   </div>`;
+
   html+=renderPlayersRingHtml(room,gs);
-  html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược':gs.phase==='fighting'?'⚔️ Đang đá gà...':'✅ Kết thúc'}</div></div>`;
+  html+=`<div class="status-msg"><div class="turn-indicator">${
+    phase==='betting'?'💰 Đặt cược (chỉ thắng / thua — không hòa)'
+    : phase==='fighting'?'⚔️ Đang đá gà...'
+    : '✅ Kết thúc'
+  }</div></div>`;
+
   html+=`<div class="center-area"><div class="bet-row">`;
-  CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${dagaChipValue===v?' chip-selected':''}" onclick="dagaSetChip(${v})">${chipLabel(v)}</div>`});
-  html+=`</div><div class="bc-board" style="grid-template-columns:repeat(3,1fr);max-width:420px">`;
-  const gates=[{id:'do',icon:'🔴',name:'Gà Đỏ'},{id:'xanh',icon:'🟢',name:'Gà Xanh'},{id:'hoa',icon:'🤝',name:'Hòa'}];
+  CHIP_VALUES.forEach(v=>{
+    html+=`<div class="chip c${v}${dagaChipValue===v?' chip-selected':''}" onclick="dagaSetChip(${v})">${chipLabel(v)}</div>`;
+  });
+  html+=`</div>
+  <div class="bc-board" style="grid-template-columns:repeat(2,1fr);max-width:360px">`;
+
+  const gates=[
+    {id:'a',icon:'🔴',name:'Gà A',desc:'x2'},
+    {id:'b',icon:'🔵',name:'Gà B',desc:'x2'}
+  ];
   gates.forEach(s=>{
     const myAmt=myBets[s.id]||0;
-    const disabled=gs.phase!=='betting';
+    const disabled=phase!=='betting';
     html+=`<div class="bc-cell${disabled?' bc-disabled':''}${myAmt?' bc-has-bet':''}" ${disabled?'':`onclick="dagaBet('${s.id}')"`}>
-      <div class="bc-icon">${s.icon}</div><div class="bc-name">${s.name}</div>
+      <div class="bc-icon">${s.icon}</div>
+      <div class="bc-name">${s.name}</div>
+      <div style="font-size:11px;color:#6a9a70">${s.desc}</div>
       ${myAmt?`<div class="bc-mybet">${fmtVnd(myAmt)}</div>`:''}
       ${renderPublicBetsHtml(gs,s.id)}
     </div>`;
   });
   html+=`</div>`;
-  if(gs.phase==='betting'){
-    html+=`<div class="action-row"><button class="btn btn-gray" onclick="dagaClear()">↺ Hủy cược</button>
-      ${isHost?`<button class="btn btn-gold" onclick="dagaFight()">⚔️ Bắt đầu đá</button>`:''}</div>`;
-  } else if(gs.phase==='done'&&isHost){
+
+  if(phase==='betting'){
+    html+=`<div class="action-row">
+      <button class="btn btn-gray" onclick="dagaClear()">↺ Hủy cược</button>
+      ${isHost?`<button class="btn btn-gold" onclick="dagaFight()">⚔️ Bắt đầu đá</button>`:''}
+    </div>`;
+    if(!isHost) html+=`<div style="color:#9dbfa0;font-size:13px;margin-top:8px">Chờ chủ phòng bắt đầu đá...</div>`;
+  } else if(phase==='done'&&isHost){
     html+=`<div class="action-row"><button class="btn btn-green" onclick="startGame()">🔄 Ván mới</button></div>`;
+  } else if(phase==='done'){
+    html+=`<div style="color:#9dbfa0;font-size:13px;margin-top:8px">Chờ chủ phòng bắt đầu ván mới...</div>`;
   }
   html+=`</div></div>`;
   gc.innerHTML=html;
+
+  // Hiệu ứng va chạm khi đang đá
+  if(phase==='fighting'){
+    const imp=document.getElementById('dagaImpact');
+    if(imp){
+      let n=0;
+      const t=setInterval(()=>{
+        imp.classList.remove('show');
+        void imp.offsetWidth;
+        imp.classList.add('show');
+        if(++n>=4) clearInterval(t);
+      },450);
+    }
+    if(typeof fxShake==='function') setTimeout(()=>fxShake(),300);
+  }
 }
-window.dagaSetChip=function(v){if(!canBetNow(getRoom(inRoom)))return;dagaChipValue=v;SFX.click();const r=getRoom(inRoom);if(r)renderDaGa(r)};
+window.dagaSetChip=function(v){
+  if(!canBetNow(getRoom(inRoom)))return;
+  dagaChipValue=v;SFX.click();
+  const r=getRoom(inRoom);if(r)renderDaGa(r);
+};
 window.dagaBet=async function(gid){
   const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
   const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
+  if(gid!=='a'&&gid!=='b')return;
   const amt=dagaChipValue;
   const ok=await changeCoinsTx(me.username,-amt);if(!ok){toast('Không đủ tiền!');return}
   await setBetPath(inRoom,me.username,gid,amt);
@@ -2314,36 +2431,54 @@ window.dagaBet=async function(gid){
 window.dagaClear=async function(){
   const room=getRoom(inRoom);if(!room||!canBetNow(room))return;
   const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
-  const mine=gs.bets[me.username]||{};const total=Object.values(mine).reduce((a,b)=>a+b,0);
+  const mine=gs.bets[me.username]||{};
+  const total=Object.values(mine).reduce((a,b)=>a+b,0);
   if(total<=0)return;
-  await changeCoinsTx(me.username,total);await clearMyBetsPath(inRoom,me.username);
+  await changeCoinsTx(me.username,total);
+  await clearMyBetsPath(inRoom,me.username);
   gs.bets[me.username]={};SFX.click();renderDaGa(room);
 };
 window.dagaFight=function(){
   const room=getRoom(inRoom);if(!room||room.host!==me.username)return;
   const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
   SFX.roll();speak('Bắt đầu đá gà');
+  if(typeof fxShake==='function') fxShake();
   gs.phase='fighting';room.gameState=gs;updateRoom(inRoom,room);
   setTimeout(()=>{
-    const r=Math.random();
-    // 46% đỏ, 46% xanh, 8% hòa
-    const winner=r<0.46?'do':r<0.92?'xanh':'hoa';
-    const odds={do:2,xanh:2,hoa:8};
-    const users=getUsers();const results={};let hostDelta=0;const hostUser=room.host;
+    // Chỉ A hoặc B — 50/50, không hòa
+    const winner = Math.random() < 0.5 ? 'a' : 'b';
+    const odds = {a:2, b:2};
+    const users=getUsers();
+    const results={};
+    let hostDelta=0;
+    const hostUser=room.host;
     room.players.forEach(p=>{
-      const mine=gs.bets[p]||{};let staked=0,returned=0;
-      Object.keys(mine).forEach(g=>{const amt=mine[g];staked+=amt;if(g===winner)returned+=amt*odds[g]});
-      const net=returned-staked;results[p]={net};
-      if(users[p]&&returned>0)users[p].coins=(users[p].coins||0)+returned;
-      if(p!==hostUser)hostDelta-=net;
+      const mine=gs.bets[p]||{};
+      let staked=0, returned=0;
+      Object.keys(mine).forEach(g=>{
+        const amt=mine[g]||0;
+        staked+=amt;
+        if(g===winner) returned+=amt*odds[g];
+      });
+      const net=returned-staked;
+      results[p]={net};
+      if(users[p]&&returned>0) users[p].coins=(users[p].coins||0)+returned;
+      if(p!==hostUser) hostDelta-=net;
     });
-    if(users[hostUser])users[hostUser].coins=Math.max(0,(users[hostUser].coins||0)+hostDelta);
+    if(users[hostUser]) users[hostUser].coins=Math.max(0,(users[hostUser].coins||0)+hostDelta);
     saveUsers(users);
-    gs.winner=winner;gs.results=results;gs.phase='done';
-    room.gameState=gs;updateRoom(inRoom,room);
+    gs.winner=winner;
+    gs.results=results;
+    gs.phase='done';
+    room.gameState=gs;
+    updateRoom(inRoom,room);
     const myNet=results[me.username]?.net||0;
-    if(myNet>0){SFX.win();speak('Thắng rồi!')}else if(myNet<0){SFX.lose();speak('Thua rồi')}
-  },2200);
+    if(myNet>0){SFX.win();speak('Thắng rồi!')}
+    else if(myNet<0){SFX.lose();speak('Thua rồi')}
+    if(typeof pushHistory==='function' && me){
+      pushHistory('Đá Gà', myNet, winner==='a'?'Gà A':'Gà B');
+    }
+  },2400);
 };
 
 // ======================================================
