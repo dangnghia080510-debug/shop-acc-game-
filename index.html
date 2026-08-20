@@ -649,32 +649,46 @@ function createRoom(){
 }
 
 function joinRoom(){
-  if(!firebaseReady){toast('Đang kết nối máy chủ, vui lòng đợi giây lát...');return}
-  const id=document.getElementById('joinId').value.trim().replace(/\s/g,'');
-  const pass=document.getElementById('joinPass').value;
-  if(!id||!pass){showErr('joinErr','Nhập ID và mật khẩu phòng');return}
-  const room=getRoom(id);
-  if(!room){showErr('joinErr','Phòng không tồn tại');return}
-  if(room.pass!==pass){showErr('joinErr','Sai mật khẩu phòng');return}
-  if(!room.spectators)room.spectators=[];
-  // Đã là player hoặc spectator → vào lại
-  if(room.players.includes(me.username)||room.spectators.includes(me.username)){
-    inRoom=id;enterRoom(id);return;
-  }
-  // Còn chỗ → vào chơi; đầy → vào xem (spectator)
-  if(room.players.length<room.max){
-    room.players.push(me.username);
-    updateRoom(id,room);
-    inRoom=id;enterRoom(id);
-    SFX.join();
-    if(room.status==='playing')toast('Bạn đã vào phòng đang chơi — có thể đặt cược nếu còn mở cửa');
-    else toast('Đã vào phòng với tư cách người chơi');
-  } else {
-    room.spectators.push(me.username);
-    updateRoom(id,room);
-    inRoom=id;enterRoom(id);
-    SFX.join();
-    toast('Phòng đã đầy — bạn vào xem (không đặt cược được)');
+  try{
+    if(!firebaseReady){toast('Đang kết nối máy chủ, vui lòng đợi giây lát...');return}
+    if(!me){showErr('joinErr','Hãy đăng nhập trước');return}
+    let id=document.getElementById('joinId').value.trim().replace(/\s/g,'');
+    const pass=document.getElementById('joinPass').value;
+    if(!id||!pass){showErr('joinErr','Nhập ID và mật khẩu phòng');return}
+    // Hỗ trợ ID số (string key trên Firebase)
+    let room=getRoom(id);
+    if(!room&&getRooms()){
+      // Thử tìm không phân biệt khoảng trắng / kiểu
+      const all=getRooms();
+      const key=Object.keys(all).find(k=>String(k)===String(id));
+      if(key){id=key;room=all[key]}
+    }
+    if(!room){showErr('joinErr','Phòng không tồn tại (ID: '+id+')');return}
+    if(String(room.pass)!==String(pass)){showErr('joinErr','Sai mật khẩu phòng');return}
+    if(!room.players)room.players=[];
+    if(!room.spectators)room.spectators=[];
+    // Đã là player hoặc spectator → vào lại
+    if(room.players.includes(me.username)||room.spectators.includes(me.username)){
+      inRoom=id;enterRoom(id);return;
+    }
+    // Còn chỗ → vào chơi; đầy → vào xem (spectator)
+    if(room.players.length<room.max){
+      room.players.push(me.username);
+      updateRoom(id,room);
+      inRoom=id;enterRoom(id);
+      SFX.join();
+      if(room.status==='playing')toast('Bạn đã vào phòng đang chơi — có thể đặt cược nếu còn mở cửa');
+      else toast('Đã vào phòng với tư cách người chơi');
+    } else {
+      room.spectators.push(me.username);
+      updateRoom(id,room);
+      inRoom=id;enterRoom(id);
+      SFX.join();
+      toast('Phòng đã đầy — bạn vào xem (không đặt cược được)');
+    }
+  }catch(err){
+    console.error('joinRoom',err);
+    showErr('joinErr','Lỗi vào phòng: '+(err.message||err));
   }
 }
 
@@ -706,10 +720,14 @@ function quickJoinRoom(id){
 }
 
 function enterRoom(id){
-  ['createRoom','joinRoom','roomBrowser','mainMenu'].forEach(x=>document.getElementById(x).style.display='none');
+  inRoom=id;
+  ['createRoom','joinRoom','roomBrowser','mainMenu'].forEach(x=>{
+    const el=document.getElementById(x);if(el)el.style.display='none';
+  });
   document.getElementById('lobby').style.display='none';
-  document.getElementById('gameRoom').style.display='block';
-  document.getElementById('gameRoom').className='show';
+  const gr=document.getElementById('gameRoom');
+  gr.classList.add('show');
+  gr.style.display='flex';
   refreshRoom();
   startRoomPolling();
 }
@@ -736,7 +754,9 @@ function leaveRoom(){
     }
   }
   inRoom=null;stopPolling();
-  document.getElementById('gameRoom').className='';
+  const gr=document.getElementById('gameRoom');
+  gr.classList.remove('show');
+  gr.style.display='none';
   document.getElementById('lobby').style.display='flex';
   document.getElementById('mainMenu').style.display='block';
   refreshMyCoin();
@@ -836,7 +856,7 @@ function renderWaiting(room){
   if(imSpec){
     html+=`<div class="waiting-msg" style="padding:8px;font-size:13px;color:#9dbfa0">Bạn đang xem — chờ có ghế trống hoặc chủ phòng bắt đầu</div>`;
   } else if(isHost&&room.players.length>=minP){
-    html+=`<div class="ready-row"><button class="btn btn-gold" style="width:200px" onclick="startGame();SFX.start()">▶ Bắt đầu ván</button></div>`;
+    html+=`<div class="ready-row"><button class="btn btn-gold" style="width:200px" onclick="startGame()">▶ Bắt đầu ván</button></div>`;
   } else if(!isHost){
     html+=`<div class="waiting-msg" style="padding:8px;font-size:13px;color:#9dbfa0">Chờ chủ phòng bắt đầu...</div>`;
   }
@@ -901,6 +921,25 @@ function canBetNow(room){
   if(!room||isSpectator(room))return false;
   if(!isPlayer(room))return false;
   return true;
+}
+
+// Bắt đầu ván (host bấm) — hàm này từng bị mất khi gỡ Xì Dách
+function startGame(){
+  try{
+    const room=getRoom(inRoom);
+    if(!room){toast('Không tìm thấy phòng');return}
+    if(room.host!==me.username){toast('Chỉ chủ phòng mới bắt đầu được');return}
+    if(isSpectator(room)){toast('Bạn đang xem — không bắt đầu được');return}
+    if(!room.players||room.players.length<1){toast('Cần ít nhất 1 người chơi');return}
+    const users=getUsers();
+    if(room.gameType==='baucua'){startBauCua(room,users);SFX.start();return}
+    if(room.gameType==='taixiu'){startTaiXiu(room,users);SFX.start();return}
+    if(room.gameType==='xocdia'){startXocDia(room,users);SFX.start();return}
+    toast('Loại game không hỗ trợ: '+(room.gameType||'?'));
+  }catch(err){
+    console.error('startGame',err);
+    toast('Lỗi bắt đầu ván: '+(err.message||err));
+  }
 }
 
 function startBauCua(room,users){
