@@ -176,6 +176,62 @@ select.inp{appearance:none}
 .entry-fx-fire .entry-name{color:#e74c3c;text-shadow:0 0 20px #e74c3c}
 .entry-fx-gold .entry-name{color:#f0c030;text-shadow:0 0 24px #f0c030}
 .entry-fx-rainbow .entry-name{background:linear-gradient(90deg,#e74c3c,#f0c030,#27a85f,#3498db,#9b59b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* Admin special border */
+.seat-card.is-admin,.player-slot.is-admin{
+  border:3px solid #ff6b00!important;
+  box-shadow:0 0 0 2px #f0c030,0 0 20px #ff6b0088,0 0 40px #f0c03044!important;
+  animation:adminBorderPulse 2s ease-in-out infinite;
+}
+@keyframes adminBorderPulse{
+  0%,100%{box-shadow:0 0 0 2px #f0c030,0 0 16px #ff6b0066,0 0 32px #f0c03033}
+  50%{box-shadow:0 0 0 3px #ff6b00,0 0 28px #ff6b00aa,0 0 48px #f0c03066}
+}
+.seat-avatar.is-admin-av,.pavatar.is-admin-av{
+  border:3px solid #ff6b00!important;
+  box-shadow:0 0 0 2px #f0c030,0 0 14px #ff6b0088;
+  width:64px!important;height:64px!important;
+}
+.vip-badge{
+  display:inline-block;font-size:10px;font-weight:900;padding:1px 6px;border-radius:6px;
+  margin-left:4px;vertical-align:middle;letter-spacing:.5px;
+}
+.vip-1,.vip-2{background:#5a6a5a;color:#c0d0c0}
+.vip-3,.vip-4{background:#2a5a8a;color:#a0d0ff}
+.vip-5,.vip-6{background:#6a2a8a;color:#e0b0ff}
+.vip-7{background:linear-gradient(135deg,#c0392b,#e67e22);color:#fff}
+.vip-8{background:linear-gradient(135deg,#f0c030,#ff6b00);color:#1a0a00;box-shadow:0 0 8px #f0c03088}
+.verified-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;background:#1da1f2;color:#fff;
+  font-size:10px;font-weight:900;margin-left:4px;vertical-align:middle;
+  box-shadow:0 0 6px #1da1f288;
+}
+.avatar-img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.seat-avatar.has-img,.pavatar.has-img{padding:0;overflow:hidden;font-size:0}
+
+/* Chat center modal */
+.chat-sidebar{
+  width:min(420px,92vw)!important;max-width:420px!important;
+  left:50%!important;right:auto!important;top:50%!important;
+  transform:translate(-50%,-50%) scale(.92)!important;
+  opacity:0;pointer-events:none;
+  max-height:70vh!important;border-radius:16px!important;
+  border:1px solid var(--gold)!important;
+  box-shadow:0 20px 60px #000a!important;
+  transition:.25s ease!important;
+  z-index:200!important;
+}
+.chat-sidebar.open{
+  transform:translate(-50%,-50%) scale(1)!important;
+  opacity:1;pointer-events:auto;
+}
+.chat-backdrop{
+  display:none;position:fixed;inset:0;background:#0008;z-index:199;
+}
+.chat-backdrop.open{display:block}
+.chat-btn{z-index:201}
+
 .status-msg{font-size:16px;font-weight:700;margin:10px 0;min-height:28px;color:var(--gold)}
 .pot-display{font-size:14px;color:#9dbfa0;margin-bottom:8px}
 .result-badge{font-size:20px;font-weight:900;margin-top:6px;min-height:28px}
@@ -306,12 +362,13 @@ select.inp{appearance:none}
       <button class="btn btn-gray" onclick="showRoomBrowser()">📋 Danh sách phòng</button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
         <button class="btn btn-sm btn-gray" onclick="showLeaderboard()" style="margin:0">🏆 Xếp hạng</button>
-        <button class="btn btn-sm btn-gray" onclick="claimDaily()" style="margin:0">🎁 Điểm danh</button>
-        <button class="btn btn-sm btn-gray" onclick="showProfile()" style="margin:0">👤 Hồ sơ</button>
+                <button class="btn btn-sm btn-gray" onclick="showProfile()" style="margin:0">👤 Hồ sơ</button>
         <button class="btn btn-sm btn-gray" onclick="showHistory()" style="margin:0">📜 Lịch sử</button>
         <button class="btn btn-sm btn-gray" onclick="showFriends()" style="margin:0">👥 Bạn bè</button>
         <button class="btn btn-sm btn-gray" onclick="showAchievements()" style="margin:0">🏅 Thành tựu</button>
         <button class="btn btn-sm btn-gold" onclick="showShop()" style="margin:0">🛒 Cửa hàng</button>
+        <button class="btn btn-sm btn-green" onclick="showGetKey()" style="margin:0">🔑 Get Key</button>
+        <button class="btn btn-sm btn-gold" onclick="showRedeemKey()" style="margin:0">💎 Nhập Server Key</button>
         <button class="btn btn-sm btn-gold" onclick="showCreateTour()" style="margin:0;grid-column:1/-1">🏆 Tạo giải đấu (Tournament)</button>
       </div>
       <div id="adminMenuBtn" style="display:none;margin-top:10px">
@@ -422,6 +479,12 @@ select.inp{appearance:none}
     </div>
     <button class="btn btn-sm btn-gold" style="margin-top:10px" onclick="collectAllToAdmin()">📥 Thu toàn bộ tiền người chơi → Admin</button>
     <p style="font-size:11px;color:#6a9a70;margin:6px 0">Lấy toàn bộ tiền của mọi tài khoản (trừ admin) chuyển vào Admin</p>
+    <button class="btn btn-sm btn-green" style="margin-top:8px" onclick="setVipSelected()">⭐ Set VIP (0–8) — nhập cấp vào ô số</button>
+    <button class="btn btn-sm btn-red" style="margin-top:8px" onclick="adminBanSelected()">🔒 Khóa acc (giờ trong ô số, 0=vĩnh viễn)</button>
+    <button class="btn btn-sm btn-green" style="margin-top:8px" onclick="adminUnbanSelected()">🔓 Mở khóa acc đã chọn</button>
+    <button class="btn btn-sm btn-gold" style="margin-top:8px" onclick="showShopManager();closeAdmin()">🛒 Quản lý Shop (thêm/sửa/hết hạn)</button>
+    <button class="btn btn-sm btn-gold" style="margin-top:8px" onclick="showServerConfig();closeAdmin()">🔑 Server Key & Get Key</button>
+    <button class="btn btn-sm btn-gold" style="margin-top:8px" onclick="showNameTicketConfig();closeAdmin()">✏️ Cấu hình Vé đổi tên</button>
     <button class="btn btn-gray btn-sm" style="margin-top:8px" onclick="closeAdmin()">Đóng</button>
   </div>
 </div>
@@ -453,6 +516,7 @@ select.inp{appearance:none}
   </div>
   <!-- chat -->
   <button class="chat-btn" onclick="toggleChat()" title="Chat">💬</button>
+  <div class="chat-backdrop" id="chatBackdrop" onclick="toggleChat()"></div>
   <div class="chat-sidebar" id="chatSidebar">
     <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700;color:var(--gold);display:flex;justify-content:space-between;align-items:center">
       💬 Chat phòng <button class="btn-icon" onclick="toggleChat()" style="font-size:16px">✕</button>
@@ -482,7 +546,7 @@ select.inp{appearance:none}
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin123';
 const ADMIN_COINS_INIT = 999999999;   // ~1 tỷ VND
-const PLAYER_COINS_INIT = 500000;     // 500.000đ khi đăng ký
+const PLAYER_COINS_INIT = 0;           // Không tặng tiền khi đăng ký
 
 // Hiển thị tiền VND
 function fmtVnd(n){
@@ -704,6 +768,7 @@ function renderPublicBetsHtml(gs, gateId){
 function checkFirebaseReady(){
   if(localUsers!==null && localRooms!==null && !firebaseReady){
     firebaseReady=true;
+    try{loadServerConfig();loadDynamicShop();loadShopPrices()}catch(e){}
     tryAutoLogin();
     const ov=document.getElementById('connOverlay');
     if(ov)ov.style.display='none';
@@ -722,7 +787,10 @@ function tryAutoLogin(){
   if(!saved||!saved.u)return false;
   const users=getUsers();
   const u=users[saved.u];
-  if(u&&u.password===saved.p){me=u;enterApp();return true}
+  if(u&&u.password===saved.p){
+    if(typeof isUserBanned==='function'&&isUserBanned(u)){clearRemember();return false}
+    me=u;enterApp();return true
+  }
   return false;
 }
 
@@ -732,7 +800,7 @@ db.ref('users').on('value', snap=>{
   if(firstLoad){
     // Init admin account exactly once, only after we know the real server state
     if(!localUsers[ADMIN_USER]){
-      localUsers[ADMIN_USER]={username:ADMIN_USER,password:ADMIN_PASS,displayName:'👑 Admin',coins:ADMIN_COINS_INIT,isAdmin:true};
+      localUsers[ADMIN_USER]={username:ADMIN_USER,password:ADMIN_PASS,displayName:'👑 Admin',coins:ADMIN_COINS_INIT,isAdmin:true,vip:8,frame:'admin',entryFx:'fx_admin',avatar:'👑'};
       saveUsers(localUsers);
     }
     checkFirebaseReady();
@@ -779,7 +847,7 @@ function doAuth(){
   if(authMode==='register'){
     if(!name){showErr('authErr','Nhập tên hiển thị');return}
     if(users[user]){showErr('authErr','Tên đăng nhập đã tồn tại');return}
-    users[user]={username:user,password:pass,displayName:name,coins:PLAYER_COINS_INIT,isAdmin:false};
+    users[user]={username:user,password:pass,displayName:name,coins:PLAYER_COINS_INIT,isAdmin:false,vip:0};
     saveUsers(users);
     me=users[user];
     rememberLogin(user,pass);
@@ -787,6 +855,7 @@ function doAuth(){
   } else {
     if(!users[user]){showErr('authErr','Tài khoản không tồn tại');return}
     if(users[user].password!==pass){showErr('authErr','Sai mật khẩu');return}
+    if(isUserBanned(users[user])){showErr('authErr','Tài khoản đã bị khóa'+(users[user].banReason?': '+users[user].banReason:''));return}
     me=users[user];
     rememberLogin(user,pass);
     enterApp();
@@ -797,7 +866,14 @@ function enterApp(){
   if(typeof ensureUserExtras==='function')ensureUserExtras(me);
   document.getElementById('authSection').style.display='none';
   document.getElementById('mainMenu').style.display='block';
-  document.getElementById('myTag').textContent=(me.avatar||'👤')+' '+me.displayName;
+  const tag=document.getElementById('myTag');
+  if(tag){
+    ensureUserExtras(me);
+    const v=getVipLevel(me);
+    tag.innerHTML=(me.avatarUrl?('🖼️ '):((me.avatar||'👤')+' '))+escHtml(me.displayName)
+      +(me.isAdmin?' <span class="verified-badge">✓</span>':'')
+      +(v>0?` <span class="vip-badge vip-${v}">VIP ${v}</span>`:'');
+  }
   refreshMyCoin();
   if(me.isAdmin)document.getElementById('adminMenuBtn').style.display='block';
 }
@@ -1009,6 +1085,31 @@ function startRoomPolling(){
 }
 function stopPolling(){if(roomPollTimer)clearInterval(roomPollTimer);roomPollTimer=null}
 
+
+function kickPlayer(username){
+  if(!inRoom||!me)return;
+  const room=getRoom(inRoom);
+  if(!room)return;
+  if(room.host!==me.username && !me.isAdmin){toast('Chỉ chủ phòng hoặc Admin mới kick được');return}
+  if(username===me.username){toast('Không thể tự kick');return}
+  if(username===room.host && !me.isAdmin){toast('Không kick được chủ phòng');return}
+  room.players=(room.players||[]).filter(p=>p!==username);
+  room.spectators=(room.spectators||[]).filter(p=>p!==username);
+  if(room.players.length===0){removeRoom(inRoom);leaveRoom();return}
+  if(room.host===username) room.host=room.players[0];
+  // clear bets of kicked
+  if(room.gameState&&room.gameState.bets) delete room.gameState.bets[username];
+  updateRoom(inRoom,room);
+  const users=getUsers();
+  const name=(users[username]&&users[username].displayName)||username;
+  toast('Đã kick '+name);
+  SFX.click();
+  if(room.chat){
+    room.chat.push({from:'Hệ thống',text:'Đã kick '+name+' khỏi phòng',t:Date.now()});
+    updateRoom(inRoom,room);
+  }
+}
+
 function leaveRoom(){
   if(!inRoom)return;
   const room=getRoom(inRoom);
@@ -1138,11 +1239,14 @@ function renderWaiting(room){
       const u=users[p]||{displayName:p,coins:0};
       const meCls=p===me.username?' is-me':'';
       const hostCls=p===room.host?' is-host':'';
-      html+=`<div class="seat-card${meCls}${hostCls}">
-        <div class="seat-label">Ghế ${i+1}${p===room.host?' · Chủ':''}</div>
-        <div class="seat-avatar">${avatarFor(p)}</div>
-        <div class="seat-name">${escHtml(u.displayName)}${p===room.host?' 👑':''}</div>
+      const isAd=!!u.isAdmin;
+      const canKick=(room.host===me.username||me.isAdmin)&&p!==me.username;
+      html+=`<div class="seat-card${meCls}${hostCls}${isAd?' is-admin':''}">
+        <div class="seat-label">Ghế ${i+1}${p===room.host?' · Chủ':''}${isAd?' · ADMIN':''}</div>
+        ${avatarHtml(u,p,'seat-avatar')}
+        <div class="seat-name">${displayNameHtml(u,p)}${p===room.host?' 👑':''}</div>
         <div class="seat-bal">💰 ${fmtVnd(u.coins)}</div>
+        ${canKick?`<button class="btn btn-sm btn-red" style="margin-top:6px;padding:4px 10px;font-size:11px;width:auto" onclick="kickPlayer('${p}')">Kick</button>`:''}
         <div class="seat-chair">🪑</div>
       </div>`;
     } else {
@@ -1208,10 +1312,13 @@ function renderPlayersRingHtml(room,gs){
       const cls=r.net>0?'win':(r.net<0?'lose':'draw');
       extra=`<div class="result-badge result-${cls}">${r.net>0?'🏆 +'+fmtVnd(r.net):r.net<0?'💸 -'+fmtVnd(Math.abs(r.net)):'🤝 Hòa'}</div>`;
     }
-    html+=`<div class="player-slot${isMe?' is-me':''}${hasResult&&gs.results[p].net>0?' win-fx':''}">
-      <div class="pavatar">${avatarFor(p)}</div>
-      <div class="pname">${escHtml(u.displayName)}${p===room.host?' 👑':''}</div>
+    const isAd=!!(users[p]&&users[p].isAdmin);
+    const canKick=(room.host===me.username||me.isAdmin)&&p!==me.username;
+    html+=`<div class="player-slot${isMe?' is-me':''}${isAd?' is-admin':''}${hasResult&&gs.results[p].net>0?' win-fx':''}">
+      ${avatarHtml(u,p,'pavatar')}
+      <div class="pname">${displayNameHtml(u,p)}${p===room.host?' 👑':''}</div>
       <div class="pcoins">💰 ${fmtVnd(users[p]?.coins||0)}</div>
+      ${canKick?`<button class="btn btn-sm btn-red" style="margin-top:4px;padding:3px 8px;font-size:10px;width:auto" onclick="kickPlayer('${p}')">Kick</button>`:''}
       ${extra}
     </div>`;
   });
@@ -1453,40 +1560,62 @@ const BJ_SUITS = ['♠','♥','♦','♣'];
 const BJ_RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 let bjChipValue = 1000;
 
+// Card format: RANK+SUITCODE e.g. AS, TH, JD (S=spade H=heart D=diamond C=club) — Firebase-safe
+const BJ_SUIT_CODE = ['S','H','D','C'];
+const BJ_SUIT_SYM = {S:'♠',H:'♥',D:'♦',C:'♣'};
 function bjCreateDeck(){
   const deck = [];
-  BJ_SUITS.forEach(s => BJ_RANKS.forEach(r => deck.push(r + s)));
+  BJ_SUIT_CODE.forEach(s => BJ_RANKS.forEach(r => deck.push(r + s)));
   for(let i = deck.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   return deck;
 }
+function bjParseCard(card){
+  const c = String(card||'');
+  // Support old unicode format too
+  if(/[♠♥♦♣]/.test(c)){
+    const rank = c.slice(0,-1);
+    const suit = c.slice(-1);
+    return {rank, suit, red: suit==='♥'||suit==='♦'};
+  }
+  const suitCode = c.slice(-1).toUpperCase();
+  let rank = c.slice(0,-1).toUpperCase();
+  if(rank==='1' && c.length>=3) rank='10'; // safety
+  if(c.length>=3 && c.slice(0,2)==='10'){ rank='10'; }
+  return {rank, suit: BJ_SUIT_SYM[suitCode]||suitCode, red: suitCode==='H'||suitCode==='D'};
+}
 function bjCardValue(rank){
   if(rank === 'A') return 11;
   if(['J','Q','K'].includes(rank)) return 10;
-  return parseInt(rank, 10);
+  return parseInt(rank, 10)||0;
 }
 function bjHandScore(cards){
-  if(!cards || !cards.length) return 0;
+  if(!cards) return 0;
+  const arr = Array.isArray(cards) ? cards : Object.values(cards);
+  if(!arr.length) return 0;
   let total = 0, aces = 0;
-  cards.forEach(c => {
-    const rank = c.slice(0, -1);
+  arr.forEach(c => {
+    const {rank} = bjParseCard(c);
     if(rank === 'A'){ aces++; total += 11; }
     else total += bjCardValue(rank);
   });
   while(total > 21 && aces > 0){ total -= 10; aces--; }
   return total;
 }
-function bjIsRed(card){ return card.endsWith('♥') || card.endsWith('♦'); }
+function bjIsRed(card){ return bjParseCard(card).red; }
 function bjRenderCard(card, hidden){
   if(hidden){
     return `<div class="card" style="background:#1a5a9a;border-color:#0d3a6a;color:#1a5a9a"><div class="rank">?</div><div class="suit">🂠</div><div class="rank-bot">?</div></div>`;
   }
-  const rank = card.slice(0, -1);
-  const suit = card.slice(-1);
-  const red = bjIsRed(card) ? ' red' : '';
-  return `<div class="card${red}"><div class="rank">${rank}</div><div class="suit">${suit}</div><div class="rank-bot">${rank}</div></div>`;
+  const {rank, suit, red} = bjParseCard(card);
+  return `<div class="card${red?' red':''}"><div class="rank">${rank}</div><div class="suit">${suit}</div><div class="rank-bot">${rank}</div></div>`;
+}
+function bjNormHand(h){
+  if(!h) return [];
+  if(Array.isArray(h)) return h.map(String);
+  return Object.keys(h).sort((a,b)=>Number(a)-Number(b)).map(k=>String(h[k]));
 }
 
 function startXidach(room, users){
@@ -1506,9 +1635,8 @@ function renderXidach(room){
   else if(myBetObj && typeof myBetObj === 'object') myBet = Number(myBetObj.main) || 0;
   const phase = gs.phase || 'betting';
   const hands = gs.hands || {};
-  const dealerHand = Array.isArray(hands.dealer) ? hands.dealer : (hands.dealer ? Object.values(hands.dealer) : []);
-  let myHand = hands[me.username];
-  if(!Array.isArray(myHand)) myHand = myHand ? Object.values(myHand) : [];
+  const dealerHand = bjNormHand(hands.dealer);
+  let myHand = bjNormHand(hands[me.username]);
   const turnOrder = Array.isArray(gs.turnOrder) ? gs.turnOrder : (gs.turnOrder ? Object.values(gs.turnOrder) : []);
   const curIdx = gs.currentTurnIndex || 0;
   const currentPlayer = turnOrder[curIdx] || null;
@@ -1540,11 +1668,17 @@ function renderXidach(room){
   html += `</div>`;
 
   html += `<div class="center-area">`;
-  if(phase !== 'betting' && myHand.length){
-    const myScore = bjHandScore(myHand);
-    const bust = myScore > 21;
-    html += `<div class="pname" style="margin-bottom:8px">Bài của bạn · <span style="color:${bust ? 'var(--red)' : 'var(--gold)'}">${myScore} điểm${bust ? ' — QUẮC' : ''}</span></div>
-      <div class="my-hand">${myHand.map(c => bjRenderCard(c, false)).join('')}</div>`;
+  if(phase !== 'betting'){
+    if(myHand.length){
+      const myScore = bjHandScore(myHand);
+      const bust = myScore > 21;
+      html += `<div class="pname" style="margin-bottom:8px">Bài của bạn · <span style="color:${bust ? 'var(--red)' : 'var(--gold)'}">${myScore} điểm${bust ? ' — QUẮC' : ''}</span></div>
+        <div class="my-hand">${myHand.map(c => bjRenderCard(c, false)).join('')}</div>`;
+    } else if(phase==='playing'||phase==='dealer'||phase==='done'){
+      const myBetCheck = myBet>0 || (gs.bets&&gs.bets[me.username]);
+      if(myBetCheck) html += `<div class="pname" style="margin-bottom:8px;color:#9dbfa0">Đang đồng bộ bài... (nếu quá lâu hãy F5)</div>`;
+      else html += `<div class="pname" style="margin-bottom:8px;color:#9dbfa0">Bạn chưa đặt cược — không có bài</div>`;
+    }
   }
   if(phase === 'betting'){
     html += `<div class="pname" style="margin-bottom:10px">Chọn mức cược</div><div class="bet-row">`;
@@ -1586,16 +1720,16 @@ function renderXidach(room){
     html += `<div style="margin-top:16px;width:100%"><div class="pname" style="margin-bottom:8px">Bài tất cả người chơi</div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">`;
     turnOrder.forEach(p => {
-      let h = hands[p];
-      if(!Array.isArray(h)) h = h ? Object.values(h) : [];
+      let h = bjNormHand(hands[p]);
       const score = bjHandScore(h);
       const u = users[p] || {displayName: p};
       const res = (gs.results && gs.results[p]) || null;
       html += `<div style="background:#0d1f0f66;border:2px solid var(--border);border-radius:12px;padding:10px;min-width:100px;text-align:center">
         <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px">${escHtml(u.displayName)}</div>
         <div class="mini-cards">${h.map(c => {
-          const red = bjIsRed(c) ? ' red-card' : '';
-          return `<div class="mini-card${red}">${String(c).slice(0,-1)}${String(c).slice(-1)}</div>`;
+          const pc = bjParseCard(c);
+          const red = pc.red ? ' red-card' : '';
+          return `<div class="mini-card${red}">${pc.rank}${pc.suit}</div>`;
         }).join('')}</div>
         <div class="score-badge">${score > 21 ? 'QUẮC' : score + ' điểm'}</div>
         ${res ? `<div style="font-size:11px;margin-top:4px;color:${res.net>0?'#27a85f':res.net<0?'#e74c3c':'var(--gold)'}">${res.net>0?'+':''}${fmtVnd(res.net)}</div>` : ''}
@@ -1677,7 +1811,19 @@ window.bjDeal = function(){
   }
   gs.deck = deck; gs.hands = hands; gs.turnOrder = bettors.slice();
   gs.currentTurnIndex = 0; gs.dealerHidden = true; gs.results = {}; gs.stood = {}; gs.phase = 'playing';
-  room.gameState = gs; updateRoom(inRoom, room);
+  room.gameState = gs;
+  // Ghi rõ từng path để mọi client nhận hands
+  updateRoom(inRoom, room);
+  db.ref('rooms/'+inRoom+'/gameState').update({
+    deck: deck,
+    hands: hands,
+    turnOrder: bettors.slice(),
+    currentTurnIndex: 0,
+    dealerHidden: true,
+    results: {},
+    stood: {},
+    phase: 'playing'
+  }).catch(e=>console.error(e));
   SFX.start(); speak('Chia bài');
   setTimeout(() => bjCheckAutoStand(), 400);
 };
@@ -2890,13 +3036,71 @@ function renderAdminUsers(){
   document.getElementById('adminCoinInfo').textContent='💰 Admin: '+fmtVnd(adminU?adminU.coins:0);
   Object.values(users).filter(u=>u.username!==ADMIN_USER).forEach(u=>{
     const div=document.createElement('div');div.className='user-row';
-    div.innerHTML=`<span>${escHtml(u.displayName)} <small style="color:#9dbfa0">(${u.username})</small></span>
+    const vip=getVipLevel(u);
+    const banned=typeof isUserBanned==='function'&&isUserBanned(u);
+    div.innerHTML=`<span>${escHtml(u.displayName)} <small style="color:#9dbfa0">(${u.username})</small> <span class="vip-badge vip-${Math.max(1,vip)}">VIP ${vip}</span>${banned?' <span style="color:#e74c3c;font-size:10px">🔒</span>':''}</span>
       <span style="color:var(--gold);font-weight:700">💰 ${fmtVnd(u.coins)}</span>`;
     div.onclick=()=>{adminSelectedUser=u.username;div.style.borderLeft='3px solid var(--gold)';
       setTimeout(()=>div.style.borderLeft='',2000);toast('Đã chọn: '+u.displayName)};
     el.appendChild(div);
   });
 }
+function setVipSelected(){
+  if(!adminSelectedUser){toast('Chọn người chơi trước');return}
+  const lvl=parseInt(document.getElementById('giveCoinsAmt').value);
+  if(isNaN(lvl)||lvl<0||lvl>8){toast('VIP từ 0 đến 8');return}
+  const users=getUsers();
+  if(!users[adminSelectedUser]){toast('Không tìm thấy');return}
+  users[adminSelectedUser].vip=lvl;
+  saveUsers(users);
+  toast('Đã set VIP '+lvl+' cho '+users[adminSelectedUser].displayName);
+  renderAdminUsers();
+}
+function showShopPriceEditor(){
+  if(!me?.isAdmin)return;
+  loadShopPrices().then(()=>{
+    let html=`<div style="font-size:12px;color:#9dbfa0;margin-bottom:10px">Chỉnh giá vật phẩm shop (VND). Lưu → áp dụng cho mọi người.</div>`;
+    SHOP_ITEMS.forEach(item=>{
+      const price=getShopPrice(item.id);
+      html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:20px;width:28px">${item.icon}</span>
+        <span style="flex:1;font-size:13px;color:var(--gold)">${item.name}</span>
+        <input class="inp" id="price_${item.id}" type="number" value="${price}" style="width:110px;margin:0;padding:8px"/>
+      </div>`;
+    });
+    html+=`<button class="btn btn-gold" onclick="saveShopPrices()">💾 Lưu giá shop</button>`;
+    openFeature('⚙️ Chỉnh giá Shop', html);
+  });
+}
+let _shopPriceCache=null;
+function loadShopPrices(){
+  return db.ref('shopPrices').once('value').then(snap=>{
+    _shopPriceCache=snap.val()||{};
+    return _shopPriceCache;
+  }).catch(()=>{_shopPriceCache={};return {}});
+}
+function getShopPrice(id){
+  const item=SHOP_ITEMS.find(x=>x.id===id);
+  const def=item?item.price:0;
+  if(_shopPriceCache && _shopPriceCache[id]!=null) return Number(_shopPriceCache[id]);
+  return def;
+}
+window.saveShopPrices=function(){
+  if(!me?.isAdmin)return;
+  const prices={};
+  SHOP_ITEMS.forEach(item=>{
+    const el=document.getElementById('price_'+item.id);
+    if(el) prices[item.id]=Math.max(0,parseInt(el.value)||0);
+  });
+  db.ref('shopPrices').set(prices).then(()=>{
+    _shopPriceCache=prices;
+    toast('Đã lưu giá shop');
+    closeFeatureModal();
+  }).catch(e=>toast('Lỗi: '+e.message));
+}
+// load prices on start
+setTimeout(()=>{try{loadShopPrices()}catch(e){}},2000);
+
 function giveCoinsSelected(){
   if(!adminSelectedUser){toast('Chọn người chơi trước');return}
   const amt=parseInt(document.getElementById('giveCoinsAmt').value)||0;
@@ -2968,7 +3172,13 @@ function collectAllToAdmin(){
 // CHAT
 // ======================================================
 let chatOpen=false;
-function toggleChat(){chatOpen=!chatOpen;document.getElementById('chatSidebar').classList.toggle('open',chatOpen)}
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chatSidebar').classList.toggle('open',chatOpen);
+  const bd=document.getElementById('chatBackdrop');
+  if(bd) bd.classList.toggle('open',chatOpen);
+  if(chatOpen){const inp=document.getElementById('chatInp');if(inp)setTimeout(()=>inp.focus(),200)}
+}
 function renderChat(room){
   const el=document.getElementById('chatMsgs');
   const msgs=room.chat||[];
@@ -3203,10 +3413,345 @@ function ensureUserExtras(u){
   if(!u.history)u.history=[];
   if(!u.achievements)u.achievements={};
   if(!u.stats)u.stats={wins:0,games:0,checkins:0,maxCrash:0,maxMines:0};
-  if(!u.inventory)u.inventory={avatars:[],titles:[],entryFx:['none']};
+  if(!u.inventory)u.inventory={avatars:[],titles:[],entryFx:['none'],nameTickets:0};
+  if(u.inventory.nameTickets==null)u.inventory.nameTickets=0;
   if(!u.entryFx)u.entryFx='none';
+  if(u.vip==null) u.vip = u.isAdmin ? 8 : 0;
+  if(u.vip>8) u.vip=8;
+  if(u.vip<0) u.vip=0;
+  if(!u.avatarUrl) u.avatarUrl='';
+  if(u.isAdmin){
+    if(!u.frame || u.frame==='none') u.frame='admin';
+    if(u.entryFx==='none'||!u.entryFx) u.entryFx='fx_admin';
+  }
   return u;
 }
+function getVipLevel(u){
+  if(!u)return 0;
+  if(u.isAdmin) return 8;
+  return Math.min(8, Math.max(0, Number(u.vip)||0));
+}
+function vipBadgeHtml(u){
+  const v=getVipLevel(u);
+  if(v<=0 && !u?.isAdmin) return '';
+  const lvl=u?.isAdmin?8:v;
+  if(lvl<=0) return '';
+  return `<span class="vip-badge vip-${lvl}">VIP ${lvl}</span>`;
+}
+function verifiedHtml(u){
+  if(u&&u.isAdmin) return `<span class="verified-badge" title="Admin xác minh">✓</span>`;
+  return '';
+}
+function displayNameHtml(u, username){
+  const users=getUsers();
+  const uu=u||users[username]||{displayName:username,username:username};
+  const name=escHtml(uu.displayName||username||'?');
+  return name + verifiedHtml(uu) + vipBadgeHtml(uu);
+}
+function avatarHtml(u, username, extraClass){
+  const users=getUsers();
+  const uu=u||users[username]||{};
+  const uname=uu.username||username||'';
+  const isAd=!!uu.isAdmin;
+  const url=uu.avatarUrl||'';
+  const emoji=uu.avatar||avatarFor(uname);
+  const cls=(extraClass||'')+(isAd?' is-admin-av':'')+(url?' has-img':'');
+  if(url){
+    return `<div class="${cls}" style="overflow:hidden"><img class="avatar-img" src="${escHtml(url)}" alt="" onerror="this.parentElement.classList.remove('has-img');this.remove();this.parentElement.textContent='${emoji}'"/></div>`;
+  }
+  return `<div class="${cls}">${emoji}</div>`;
+}
+
+function isUserBanned(u){
+  if(!u)return false;
+  if(u.banned===true || u.banPermanent) return true;
+  if(u.bannedUntil && Number(u.bannedUntil)>Date.now()) return true;
+  return false;
+}
+function banUser(username, hours, reason){
+  // hours<=0 or null = permanent
+  const users=getUsers();
+  if(!users[username]){toast('Không tìm thấy');return}
+  if(users[username].isAdmin){toast('Không khóa Admin');return}
+  if(hours==null || hours<=0){
+    users[username].banPermanent=true;
+    users[username].bannedUntil=0;
+  } else {
+    users[username].banPermanent=false;
+    users[username].bannedUntil=Date.now()+hours*3600*1000;
+  }
+  users[username].banReason=reason||'';
+  saveUsers(users);
+  toast('Đã khóa '+username+(hours>0?' trong '+hours+'h':' vĩnh viễn'));
+}
+function unbanUser(username){
+  const users=getUsers();
+  if(!users[username])return;
+  users[username].banPermanent=false;
+  users[username].bannedUntil=0;
+  users[username].banReason='';
+  saveUsers(users);
+  toast('Đã mở khóa '+username);
+}
+
+const ADMIN_AVATARS=['👑','⚙️','🛡️','🦅','🔱','⚜️'];
+
+
+
+// ===== SERVER CONFIG (Firebase) =====
+let _serverConfig = {
+  keyReward: 100000,
+  getKeyUrl: '',
+  serverKeys: {}, // key -> {reward, maxUses, usedBy:{}}
+  nameTicket: {
+    visible: true,
+    price: 50000,
+    maxPerUser: 3,
+    durationHours: 0, // 0 = permanent item until used
+    appearFrom: 0,
+    appearUntil: 0 // 0 = always
+  }
+};
+let _dynamicShop = []; // extra products from Firebase
+
+function loadServerConfig(){
+  return db.ref('serverConfig').once('value').then(snap=>{
+    const v=snap.val();
+    if(v){
+      _serverConfig = Object.assign(_serverConfig, v);
+      if(!v.nameTicket) _serverConfig.nameTicket = {visible:true,price:50000,maxPerUser:3,durationHours:0,appearFrom:0,appearUntil:0};
+    }
+    return _serverConfig;
+  }).catch(()=>_serverConfig);
+}
+function saveServerConfig(){
+  return db.ref('serverConfig').set(_serverConfig);
+}
+function loadDynamicShop(){
+  return db.ref('shopCatalog').once('value').then(snap=>{
+    _dynamicShop = [];
+    const v=snap.val()||{};
+    Object.keys(v).forEach(id=>{
+      const it=v[id];
+      if(!it)return;
+      // expired?
+      if(it.expiresAt && Number(it.expiresAt)>0 && Date.now()>Number(it.expiresAt)) return;
+      _dynamicShop.push(Object.assign({id}, it));
+    });
+    return _dynamicShop;
+  }).catch(()=>{_dynamicShop=[];return []});
+}
+function getAllShopItems(){
+  const base = SHOP_ITEMS.map(x=>({...x, price: getShopPrice(x.id)}));
+  // name ticket virtual item
+  const nt=_serverConfig.nameTicket||{};
+  const now=Date.now();
+  const inWindow = (!nt.appearFrom || now>=nt.appearFrom) && (!nt.appearUntil || now<=nt.appearUntil);
+  if(nt.visible && inWindow){
+    base.push({id:'name_ticket',type:'nameTicket',icon:'✏️',name:'Vé đổi tên',price:nt.price||50000,desc:'Đổi tên hiển thị (tối đa '+(nt.maxPerUser||3)+' vé/người)'});
+  }
+  return base.concat(_dynamicShop.map(x=>({...x, price: Number(x.price)||0})));
+}
+
+function showGetKey(){
+  if(!me){toast('Đăng nhập trước');return}
+  loadServerConfig().then(cfg=>{
+    const url=(cfg.getKeyUrl||'').trim();
+    if(!url){toast('Admin chưa cấu hình link Get Key');return}
+    let html=`<p style="font-size:13px;color:#9dbfa0;margin-bottom:12px">Nhận Server Key trên website, rồi quay lại nhập key để nhận tiền.</p>
+      <p style="font-size:12px;color:var(--gold);margin-bottom:10px">Thưởng mỗi key (do Admin đặt): <b>${fmtVnd(cfg.keyReward||0)}</b></p>
+      <button class="btn btn-gold" onclick="window.open('${escHtml(url)}','_blank')">🔑 Mở trang Get Key</button>`;
+    openFeature('🔑 Get Key', html);
+  });
+}
+function showRedeemKey(){
+  if(!me){toast('Đăng nhập trước');return}
+  let html=`<p style="font-size:13px;color:#9dbfa0;margin-bottom:10px">Nhập Server Key đã nhận để nhận tiền ảo.</p>
+    <input class="inp" id="redeemKeyInp" placeholder="Dán key vào đây"/>
+    <button class="btn btn-gold" onclick="redeemServerKey()">💎 Đổi key lấy tiền</button>`;
+  openFeature('💎 Nhập Server Key', html);
+}
+window.redeemServerKey=async function(){
+  if(!me)return;
+  const key=(document.getElementById('redeemKeyInp').value||'').trim().toUpperCase();
+  if(!key){toast('Nhập key');return}
+  await loadServerConfig();
+  const keys=_serverConfig.serverKeys||{};
+  const info=keys[key];
+  if(!info || info.active===false){toast('Key không hợp lệ hoặc đã tắt');return}
+  if(!info.usedBy) info.usedBy={};
+  if(info.usedBy[me.username]){toast('Bạn đã dùng key này rồi');return}
+  const maxUses=Number(info.maxUses)||999999;
+  const usedCount=Object.keys(info.usedBy).length;
+  if(usedCount>=maxUses){toast('Key đã hết lượt sử dụng');return}
+  if(info.expiresAt && Date.now()>info.expiresAt){toast('Key đã hết hạn');return}
+  const reward=Number(info.reward!=null?info.reward:_serverConfig.keyReward)||0;
+  if(reward<=0){toast('Key không có thưởng');return}
+  info.usedBy[me.username]=Date.now();
+  keys[key]=info;
+  _serverConfig.serverKeys=keys;
+  await saveServerConfig();
+  const ok=await changeCoinsTx(me.username, reward);
+  if(ok){toast('Nhận '+fmtVnd(reward)+' từ key!');SFX.win();refreshMyCoin();closeFeatureModal()}
+  else toast('Lỗi cộng tiền');
+};
+
+function showServerConfig(){
+  if(!me?.isAdmin)return;
+  loadServerConfig().then(cfg=>{
+    const keys=cfg.serverKeys||{};
+    let keyList=Object.keys(keys).map(k=>{
+      const i=keys[k];
+      const used=Object.keys(i.usedBy||{}).length;
+      return `<div style="font-size:11px;padding:6px;background:#0d1f0f;border-radius:6px;margin:4px 0">${k} · thưởng ${fmtVnd(i.reward!=null?i.reward:cfg.keyReward)} · dùng ${used}/${i.maxUses||'∞'} ${i.active===false?'· TẮT':''}
+        <button class="btn btn-sm btn-red" style="margin:0 0 0 6px;padding:2px 8px;font-size:10px;width:auto" onclick="adminToggleKey('${k}')">Bật/Tắt</button></div>`;
+    }).join('')||'<p style="color:#9dbfa0;font-size:12px">Chưa có key</p>';
+    let html=`<div style="font-size:13px;color:var(--gold);margin-bottom:6px">Thưởng mặc định mỗi key</div>
+      <input class="inp" id="cfgKeyReward" type="number" value="${cfg.keyReward||0}"/>
+      <div style="font-size:13px;color:var(--gold);margin:10px 0 6px">Link website Get Key</div>
+      <input class="inp" id="cfgGetKeyUrl" placeholder="https://..." value="${escHtml(cfg.getKeyUrl||'')}"/>
+      <button class="btn btn-sm btn-green" onclick="adminSaveServerCfg()">💾 Lưu cấu hình</button>
+      <hr style="border-color:#2a3d2c;margin:14px 0"/>
+      <div style="font-size:13px;color:var(--gold);margin-bottom:6px">Tạo Server Key mới</div>
+      <input class="inp" id="newKeyVal" placeholder="Key (VD: ABC-123) — để trống = tự sinh"/>
+      <input class="inp" id="newKeyReward" type="number" placeholder="Thưởng riêng (trống = mặc định)"/>
+      <input class="inp" id="newKeyMax" type="number" placeholder="Max lượt dùng (trống = không giới hạn)" value="1"/>
+      <input class="inp" id="newKeyHours" type="number" placeholder="Hết hạn sau (giờ), 0 = không hết"/>
+      <button class="btn btn-sm btn-gold" onclick="adminCreateKey()">➕ Tạo key</button>
+      <div style="margin-top:12px;max-height:160px;overflow-y:auto">${keyList}</div>`;
+    openFeature('🔑 Server Key & Get Key', html);
+  });
+}
+window.adminSaveServerCfg=function(){
+  if(!me?.isAdmin)return;
+  _serverConfig.keyReward=parseInt(document.getElementById('cfgKeyReward').value)||0;
+  _serverConfig.getKeyUrl=(document.getElementById('cfgGetKeyUrl').value||'').trim();
+  saveServerConfig().then(()=>{toast('Đã lưu cấu hình');showServerConfig()});
+};
+window.adminCreateKey=function(){
+  if(!me?.isAdmin)return;
+  let key=(document.getElementById('newKeyVal').value||'').trim().toUpperCase();
+  if(!key){
+    const p=()=>Math.random().toString(36).slice(2,6).toUpperCase();
+    key='GB-'+p()+'-'+p();
+  }
+  if(!_serverConfig.serverKeys) _serverConfig.serverKeys={};
+  const rewardEl=document.getElementById('newKeyReward').value;
+  const max=parseInt(document.getElementById('newKeyMax').value);
+  const hours=parseInt(document.getElementById('newKeyHours').value)||0;
+  _serverConfig.serverKeys[key]={
+    reward: rewardEl===''?null:parseInt(rewardEl)||0,
+    maxUses: isNaN(max)?999999:max,
+    usedBy:{},
+    active:true,
+    expiresAt: hours>0 ? Date.now()+hours*3600*1000 : 0,
+    created: Date.now()
+  };
+  saveServerConfig().then(()=>{toast('Tạo key: '+key);showServerConfig()});
+};
+window.adminToggleKey=function(k){
+  if(!_serverConfig.serverKeys||!_serverConfig.serverKeys[k])return;
+  _serverConfig.serverKeys[k].active = _serverConfig.serverKeys[k].active===false;
+  saveServerConfig().then(()=>showServerConfig());
+};
+
+function showNameTicketConfig(){
+  if(!me?.isAdmin)return;
+  loadServerConfig().then(cfg=>{
+    const nt=cfg.nameTicket||{};
+    let html=`<div style="font-size:12px;color:#9dbfa0;margin-bottom:10px">Vé đổi tên — hiện trong shop theo cấu hình</div>
+      <label style="font-size:13px;color:var(--gold)">Hiện trong shop</label>
+      <select class="inp" id="ntVisible"><option value="1" ${nt.visible!==false?'selected':''}>Có</option><option value="0" ${nt.visible===false?'selected':''}>Không</option></select>
+      <label style="font-size:13px;color:var(--gold)">Giá (VND)</label>
+      <input class="inp" id="ntPrice" type="number" value="${nt.price||50000}"/>
+      <label style="font-size:13px;color:var(--gold)">Giới hạn vé / 1 người</label>
+      <input class="inp" id="ntMax" type="number" value="${nt.maxPerUser||3}"/>
+      <label style="font-size:13px;color:var(--gold)">Hiện từ (giờ từ giờ) — 0 = ngay</label>
+      <input class="inp" id="ntFromH" type="number" value="0" placeholder="0"/>
+      <label style="font-size:13px;color:var(--gold)">Hiện trong bao lâu (giờ) — 0 = mãi mãi</label>
+      <input class="inp" id="ntDurH" type="number" value="0" placeholder="0 = không giới hạn thời gian hiện"/>
+      <button class="btn btn-gold" onclick="adminSaveNameTicket()">💾 Lưu vé đổi tên</button>`;
+    openFeature('✏️ Vé đổi tên', html);
+  });
+}
+window.adminSaveNameTicket=function(){
+  if(!me?.isAdmin)return;
+  const vis=document.getElementById('ntVisible').value==='1';
+  const price=parseInt(document.getElementById('ntPrice').value)||0;
+  const max=parseInt(document.getElementById('ntMax').value)||1;
+  const fromH=parseInt(document.getElementById('ntFromH').value)||0;
+  const durH=parseInt(document.getElementById('ntDurH').value)||0;
+  const now=Date.now();
+  _serverConfig.nameTicket={
+    visible:vis,
+    price,
+    maxPerUser:max,
+    durationHours:0,
+    appearFrom: fromH>0 ? now+fromH*3600*1000 : 0,
+    appearUntil: durH>0 ? now+(fromH+durH)*3600*1000 : 0
+  };
+  saveServerConfig().then(()=>{toast('Đã lưu cấu hình vé đổi tên');closeFeatureModal()});
+};
+
+function showShopManager(){
+  if(!me?.isAdmin)return;
+  Promise.all([loadDynamicShop(),loadShopPrices()]).then(()=>{
+    let html=`<div style="font-size:12px;color:#9dbfa0;margin-bottom:8px">Thêm / sửa sản phẩm động (có hạn)</div>
+      <input class="inp" id="spId" placeholder="ID (vd: av_special1)"/>
+      <input class="inp" id="spName" placeholder="Tên sản phẩm"/>
+      <input class="inp" id="spIcon" placeholder="Icon emoji"/>
+      <select class="inp" id="spType"><option value="avatar">Avatar</option><option value="title">Danh hiệu</option><option value="entryFx">Hiệu ứng</option><option value="other">Khác</option></select>
+      <input class="inp" id="spPrice" type="number" placeholder="Giá VND"/>
+      <input class="inp" id="spDesc" placeholder="Mô tả"/>
+      <input class="inp" id="spHours" type="number" placeholder="Hết hạn sau (giờ), 0 = không hết"/>
+      <button class="btn btn-gold" onclick="adminAddShopItem()">➕ Thêm / Cập nhật</button>
+      <hr style="border-color:#2a3d2c;margin:12px 0"/>
+      <div style="font-size:13px;color:var(--gold)">Sản phẩm động</div>`;
+    if(!_dynamicShop.length) html+=`<p style="color:#9dbfa0;font-size:12px">Chưa có</p>`;
+    _dynamicShop.forEach(it=>{
+      const exp=it.expiresAt?new Date(it.expiresAt).toLocaleString('vi-VN'):'Không hết';
+      html+=`<div style="padding:8px;background:#0d1f0f;border-radius:8px;margin:6px 0;font-size:12px">
+        ${it.icon||'📦'} <b style="color:var(--gold)">${escHtml(it.name)}</b> · ${fmtVnd(it.price)} · ${it.type}<br/>
+        <span style="color:#9dbfa0">Hết: ${exp} · id=${it.id}</span>
+        <button class="btn btn-sm btn-red" style="margin:4px 0 0;padding:2px 8px;font-size:10px;width:auto" onclick="adminDelShopItem('${it.id}')">Xóa</button>
+      </div>`;
+    });
+    html+=`<hr style="border-color:#2a3d2c;margin:12px 0"/><button class="btn btn-sm btn-gray" onclick="showShopPriceEditor()">Chỉnh giá item gốc</button>`;
+    openFeature('🛒 Quản lý Shop', html);
+  });
+}
+window.adminAddShopItem=function(){
+  if(!me?.isAdmin)return;
+  const id=(document.getElementById('spId').value||'').trim();
+  if(!id){toast('Nhập ID');return}
+  const hours=parseInt(document.getElementById('spHours').value)||0;
+  const item={
+    name:(document.getElementById('spName').value||id).trim(),
+    icon:(document.getElementById('spIcon').value||'📦').trim(),
+    type:document.getElementById('spType').value,
+    price:parseInt(document.getElementById('spPrice').value)||0,
+    desc:(document.getElementById('spDesc').value||'').trim(),
+    expiresAt: hours>0 ? Date.now()+hours*3600*1000 : 0
+  };
+  db.ref('shopCatalog/'+id).set(item).then(()=>{toast('Đã lưu '+id);showShopManager()});
+};
+window.adminDelShopItem=function(id){
+  if(!me?.isAdmin)return;
+  db.ref('shopCatalog/'+id).remove().then(()=>{toast('Đã xóa');showShopManager()});
+};
+window.adminBanSelected=function(){
+  if(!adminSelectedUser){toast('Chọn người chơi');return}
+  const hours=parseInt(document.getElementById('giveCoinsAmt').value);
+  const h=isNaN(hours)?0:hours;
+  banUser(adminSelectedUser, h, h<=0?'Khóa vĩnh viễn':'Khóa '+h+' giờ');
+  renderAdminUsers();
+};
+window.adminUnbanSelected=function(){
+  if(!adminSelectedUser){toast('Chọn người chơi');return}
+  unbanUser(adminSelectedUser);
+  renderAdminUsers();
+};
+
 
 const SHOP_ITEMS=[
   {id:'av_dragon',type:'avatar',icon:'🐲',name:'Rồng Vàng',price:80000,desc:'Avatar đặc biệt'},
@@ -3227,49 +3772,72 @@ const SHOP_ITEMS=[
 function showShop(){
   if(!me){toast('Hãy đăng nhập');return}
   ensureUserExtras(me);
-  const inv=me.inventory||{avatars:[],titles:[],entryFx:['none']};
-  let html=`<div style="font-size:12px;color:#9dbfa0;text-align:center;margin-bottom:10px">Mua bằng tiền ảo VND · Số dư: <b style="color:var(--gold)">${fmtVnd(me.coins||0)}</b></div>`;
-  if(me.isAdmin){
-    html+=`<div style="background:#3a1a00;border:1px solid #ff6b00;border-radius:10px;padding:10px;margin-bottom:12px;text-align:center">
-      <div style="font-size:22px">⚙️👑</div>
-      <div style="color:#ff6b00;font-weight:900">Hiệu ứng Admin — độc quyền</div>
-      <div style="font-size:11px;color:#9dbfa0;margin-top:4px">Tự động hiện khi Admin vào phòng — không bán trong shop</div>
-      <button class="btn btn-sm btn-red" style="margin-top:8px" onclick="equipEntryFx('fx_admin')">Bật FX Admin</button>
+  Promise.all([loadServerConfig(), loadDynamicShop(), loadShopPrices()]).then(()=>{
+    const inv=me.inventory||{avatars:[],titles:[],entryFx:['none']};
+    if(inv.nameTickets==null) inv.nameTickets=0;
+    const items=getAllShopItems();
+    let html=`<div style="font-size:12px;color:#9dbfa0;text-align:center;margin-bottom:10px">Số dư: <b style="color:var(--gold)">${fmtVnd(me.coins||0)}</b> · Vé đổi tên: <b>${inv.nameTickets||0}</b></div>`;
+    if(me.isAdmin){
+      html+=`<div style="background:#3a1a00;border:1px solid #ff6b00;border-radius:10px;padding:10px;margin-bottom:12px;text-align:center">
+        <div style="color:#ff6b00;font-weight:900">⚙️ Admin</div>
+        <button class="btn btn-sm btn-red" style="margin-top:6px" onclick="equipEntryFx('fx_admin')">Bật FX Admin</button>
+      </div>`;
+    }
+    const groups=[['avatar','🎭 Avatar'],['title','🏅 Danh hiệu'],['entryFx','✨ Hiệu ứng'],['nameTicket','✏️ Vé đổi tên'],['other','📦 Khác']];
+    groups.forEach(([type,label])=>{
+      const list=items.filter(i=>i.type===type);
+      if(!list.length)return;
+      html+=`<div style="font-size:13px;color:var(--gold);margin:10px 0 6px">${label}</div>`;
+      list.forEach(item=>{
+        let owned=false;
+        if(item.type==='avatar') owned=(inv.avatars||[]).includes(item.id);
+        if(item.type==='title') owned=(inv.titles||[]).includes(item.id);
+        if(item.type==='entryFx') owned=(inv.entryFx||[]).includes(item.id);
+        html+=shopItemRow(item,owned);
+      });
+    });
+    if((inv.nameTickets||0)>0){
+      html+=`<div style="margin-top:12px;padding:10px;background:#0d1f0f;border-radius:10px;border:1px solid var(--gold)">
+        <div style="color:var(--gold);font-weight:700;margin-bottom:6px">✏️ Đổi tên (còn ${inv.nameTickets} vé)</div>
+        <input class="inp" id="newDisplayNameInp" placeholder="Tên mới" maxlength="20"/>
+        <button class="btn btn-sm btn-gold" onclick="useNameTicket()">Đổi tên (-1 vé)</button>
+      </div>`;
+    }
+    html+=`<div style="font-size:13px;color:var(--gold);margin:14px 0 6px">🎒 Trang bị FX</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <button class="btn btn-sm btn-gray" style="margin:0" onclick="equipEntryFx('none')">FX: Không</button>
+      ${(inv.entryFx||[]).filter(x=>x!=='none').map(id=>{
+        const it=items.find(s=>s.id===id)||SHOP_ITEMS.find(s=>s.id===id);
+        return `<button class="btn btn-sm ${me.entryFx===id?'btn-gold':'btn-gray'}" style="margin:0" onclick="equipEntryFx('${id}')">${it?it.icon+' '+(it.name||id):id}</button>`;
+      }).join('')}
+      ${me.isAdmin?`<button class="btn btn-sm ${me.entryFx==='fx_admin'?'btn-gold':'btn-red'}" style="margin:0" onclick="equipEntryFx('fx_admin')">⚙️ Admin FX</button>`:''}
     </div>`;
-  }
-  html+=`<div style="font-size:13px;color:var(--gold);margin:8px 0 6px">🎭 Avatar đặc biệt</div>`;
-  SHOP_ITEMS.filter(i=>i.type==='avatar').forEach(item=>{
-    const owned=(inv.avatars||[]).includes(item.id);
-    html+=shopItemRow(item,owned);
+    openFeature('🛒 Cửa hàng', html);
   });
-  html+=`<div style="font-size:13px;color:var(--gold);margin:12px 0 6px">🏅 Danh hiệu</div>`;
-  SHOP_ITEMS.filter(i=>i.type==='title').forEach(item=>{
-    const owned=(inv.titles||[]).includes(item.id);
-    html+=shopItemRow(item,owned);
-  });
-  html+=`<div style="font-size:13px;color:var(--gold);margin:12px 0 6px">✨ Hiệu ứng vào phòng</div>`;
-  SHOP_ITEMS.filter(i=>i.type==='entryFx').forEach(item=>{
-    const owned=(inv.entryFx||[]).includes(item.id);
-    html+=shopItemRow(item,owned);
-  });
-  html+=`<div style="font-size:13px;color:var(--gold);margin:14px 0 6px">🎒 Đang trang bị</div>
-  <div style="font-size:13px;color:#9dbfa0;margin-bottom:6px">Avatar: ${me.avatar||'—'} · Danh hiệu: ${escHtml(me.title||'—')} · FX: ${me.entryFx||'none'}</div>
-  <div style="display:flex;flex-wrap:wrap;gap:6px">
-    <button class="btn btn-sm btn-gray" style="margin:0" onclick="equipEntryFx('none')">FX: Không</button>
-    ${(inv.entryFx||[]).filter(x=>x!=='none').map(id=>{
-      const it=SHOP_ITEMS.find(s=>s.id===id);
-      return `<button class="btn btn-sm ${me.entryFx===id?'btn-gold':'btn-gray'}" style="margin:0" onclick="equipEntryFx('${id}')">${it?it.icon+' '+it.name:id}</button>`;
-    }).join('')}
-    ${me.isAdmin?`<button class="btn btn-sm ${me.entryFx==='fx_admin'?'btn-gold':'btn-red'}" style="margin:0" onclick="equipEntryFx('fx_admin')">⚙️ Admin FX</button>`:''}
-  </div>`;
-  openFeature('🛒 Cửa hàng', html);
 }
+window.useNameTicket=function(){
+  if(!me)return;ensureUserExtras(me);
+  if(!me.inventory)me.inventory={};
+  if((me.inventory.nameTickets||0)<1){toast('Hết vé đổi tên');return}
+  const n=(document.getElementById('newDisplayNameInp').value||'').trim().slice(0,20);
+  if(!n){toast('Nhập tên mới');return}
+  me.inventory.nameTickets--;
+  me.displayName=n;
+  saveMe();
+  toast('Đã đổi tên thành: '+n);
+  const tag=document.getElementById('myTag');
+  if(tag){
+    const v=getVipLevel(me);
+    tag.innerHTML=((me.avatar||'👤')+' ')+escHtml(me.displayName)+(me.isAdmin?' <span class="verified-badge">✓</span>':'')+(v>0?` <span class="vip-badge vip-${v}">VIP ${v}</span>`:'');
+  }
+  showShop();
+};
 function shopItemRow(item,owned){
   return `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:#0d1f0f;border-radius:10px;margin-bottom:6px;border:1px solid ${owned?'var(--gold)':'var(--border)'}">
     <span style="font-size:28px">${item.icon}</span>
     <div style="flex:1;min-width:0">
       <div style="font-weight:700;color:var(--gold)">${item.name}</div>
-      <div style="font-size:11px;color:#9dbfa0">${item.desc} · ${fmtVnd(item.price)}</div>
+      <div style="font-size:11px;color:#9dbfa0">${item.desc} · ${fmtVnd(getShopPrice(item.id))}</div>
     </div>
     ${owned
       ? (item.type==='avatar'
@@ -3283,21 +3851,29 @@ function shopItemRow(item,owned){
 window.buyShopItem=async function(id){
   if(!me)return;
   ensureUserExtras(me);
-  const item=SHOP_ITEMS.find(x=>x.id===id);
+  await loadServerConfig(); await loadDynamicShop();
+  const item=getAllShopItems().find(x=>x.id===id) || SHOP_ITEMS.find(x=>x.id===id);
   if(!item){toast('Không tìm thấy vật phẩm');return}
-  if(id==='fx_admin'){toast('Hiệu ứng Admin không bán — chỉ Admin mới có');return}
-  const inv=me.inventory;
+  if(id==='fx_admin'){toast('Hiệu ứng Admin không bán');return}
+  const inv=me.inventory||{};
+  if(!inv.nameTickets) inv.nameTickets=0;
   if(item.type==='avatar'&&(inv.avatars||[]).includes(id)){toast('Đã sở hữu');return}
   if(item.type==='title'&&(inv.titles||[]).includes(id)){toast('Đã sở hữu');return}
   if(item.type==='entryFx'&&(inv.entryFx||[]).includes(id)){toast('Đã sở hữu');return}
-  const price=item.price||0;
+  if(item.type==='nameTicket'){
+    const max=(_serverConfig.nameTicket&&_serverConfig.nameTicket.maxPerUser)||3;
+    if((inv.nameTickets||0)>=max){toast('Đã đạt giới hạn '+max+' vé/người');return}
+  }
+  const price=item.type==='nameTicket' ? (item.price||0) : (item.price!=null?item.price:getShopPrice(item.id));
   if(price>0){
     const ok=await changeCoinsTx(me.username,-price);
     if(!ok){toast('Không đủ tiền!');return}
   }
-  if(item.type==='avatar'){if(!inv.avatars)inv.avatars=[];inv.avatars.push(id)}
-  if(item.type==='title'){if(!inv.titles)inv.titles=[];inv.titles.push(id)}
+  if(item.type==='avatar'){if(!inv.avatars)inv.avatars=[];inv.avatars.push(id); if(item.icon) me.avatar=item.icon}
+  if(item.type==='title'){if(!inv.titles)inv.titles=[];inv.titles.push(id); if(item.name) me.title=item.name}
   if(item.type==='entryFx'){if(!inv.entryFx)inv.entryFx=['none'];if(!inv.entryFx.includes(id))inv.entryFx.push(id)}
+  if(item.type==='nameTicket'){inv.nameTickets=(inv.nameTickets||0)+1}
+  if(item.type==='other'){ /* just owned flag */ if(!inv.others)inv.others=[]; if(!inv.others.includes(id))inv.others.push(id) }
   me.inventory=inv;
   saveMe();
   SFX.cashout();
@@ -3311,7 +3887,14 @@ window.equipShopAvatar=function(id){
   if(!item||!(me.inventory.avatars||[]).includes(id)){toast('Chưa sở hữu');return}
   me.avatar=item.icon;
   saveMe();
-  document.getElementById('myTag').textContent=(me.avatar||'👤')+' '+me.displayName;
+  const tag=document.getElementById('myTag');
+  if(tag){
+    ensureUserExtras(me);
+    const v=getVipLevel(me);
+    tag.innerHTML=(me.avatarUrl?('🖼️ '):((me.avatar||'👤')+' '))+escHtml(me.displayName)
+      +(me.isAdmin?' <span class="verified-badge">✓</span>':'')
+      +(v>0?` <span class="vip-badge vip-${v}">VIP ${v}</span>`:'');
+  }
   toast('Đã trang bị avatar '+item.icon);
   showShop();
 };
@@ -3428,7 +4011,7 @@ function showLeaderboard(){
       <span style="width:28px;font-weight:900;color:var(--gold)">${medal}</span>
       <span style="font-size:22px">${av}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:700;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(u.displayName||u.username)}${meMark}</div>
+        <div style="font-weight:700;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(u.displayName||u.username)}${u.isAdmin?" <span class=\"verified-badge\">✓</span>":""}${vipBadgeHtml(u)}${meMark}</div>
         <div style="font-size:11px;color:#9dbfa0">${u.title?escHtml(u.title):'—'}</div>
       </div>
       <div style="font-weight:700;color:var(--gold);font-size:13px">💰 ${fmtVnd(u.coins||0)}</div>
@@ -3437,36 +4020,47 @@ function showLeaderboard(){
   openFeature('🏆 Bảng xếp hạng', html);
 }
 function claimDaily(){
-  if(!me){toast('Hãy đăng nhập');return}
-  ensureUserExtras(me);
-  const today=new Date().toISOString().slice(0,10);
-  if(me.lastCheckin===today){toast('Hôm nay bạn đã điểm danh rồi!');return}
-  const streak=(me.lastCheckin && (Date.now()-new Date(me.lastCheckin).getTime()<2*864e5))?((me.checkinStreak||0)+1):1;
-  const reward=20000+Math.min(streak*5000,50000);
-  me.lastCheckin=today;me.checkinStreak=streak;
-  me.stats.checkins=(me.stats.checkins||0)+1;
-  changeCoinsTx(me.username, reward).then(ok=>{
-    if(ok){toast(`🎁 +${fmtVnd(reward)} (chuỗi ${streak} ngày)`);speak('Nhận thưởng thành công');checkAchievements();saveMe();refreshMyCoin();}
-    else toast('Lỗi nhận thưởng');
-  });
+  toast('Điểm danh đã tắt — nhận tiền qua Get Key / Server Key');
 }
+
 function showProfile(){
   if(!me)return;ensureUserExtras(me);
+  const v=getVipLevel(me);
+  const frameCss = me.isAdmin
+    ? 'box-shadow:0 0 0 3px #ff6b00,0 0 0 6px #f0c030,0 0 20px #ff6b0088;border:2px solid #ff6b00'
+    : ((FRAME_LIST.find(f=>f.id===me.frame)||FRAME_LIST[0]).css);
+  const avContent = me.avatarUrl
+    ? `<img class="avatar-img" src="${escHtml(me.avatarUrl)}" style="width:80px;height:80px"/>`
+    : (me.avatar||'👤');
   let html=`<div style="text-align:center;margin-bottom:14px">
-    <div id="profAvatarPrev" style="font-size:56px;margin:8px auto;width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1f0f;${(FRAME_LIST.find(f=>f.id===me.frame)||FRAME_LIST[0]).css}">${me.avatar||'👤'}</div>
-    <div style="font-weight:700;color:var(--gold);font-size:16px">${escHtml(me.displayName)}</div>
+    <div id="profAvatarPrev" style="font-size:56px;margin:8px auto;width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#0d1f0f;overflow:hidden;${frameCss}">${avContent}</div>
+    <div style="font-weight:700;color:var(--gold);font-size:16px">${escHtml(me.displayName)}${me.isAdmin?' <span class="verified-badge">✓</span>':''}${vipBadgeHtml(me)}</div>
     <div style="font-size:12px;color:#9dbfa0">@${escHtml(me.username)} ${me.title?'· '+escHtml(me.title):''}</div>
-    <div style="margin-top:6px;color:var(--gold)">💰 ${fmtVnd(me.coins||0)}</div>
+    <div style="margin-top:6px;color:var(--gold)">💰 ${fmtVnd(me.coins||0)} · VIP ${v}/8</div>
   </div>
-  <div style="font-size:13px;color:var(--gold);margin-bottom:6px">Chọn avatar</div>
+  <div style="font-size:13px;color:var(--gold);margin-bottom:6px">Chọn avatar emoji</div>
   <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
-  AVATAR_LIST.forEach(a=>{
-    html+=`<button onclick="setMyAvatar('${a}')" style="font-size:24px;padding:6px;border-radius:10px;border:2px solid ${me.avatar===a?'var(--gold)':'var(--border)'};background:#0d1f0f;cursor:pointer">${a}</button>`;
+  const list = me.isAdmin ? (AVATAR_LIST.concat(ADMIN_AVATARS.filter(a=>!AVATAR_LIST.includes(a)))) : AVATAR_LIST;
+  list.forEach(a=>{
+    html+=`<button onclick="setMyAvatar('${a}')" style="font-size:24px;padding:6px;border-radius:10px;border:2px solid ${me.avatar===a&&!me.avatarUrl?'var(--gold)':'var(--border)'};background:#0d1f0f;cursor:pointer">${a}</button>`;
   });
-  html+=`</div><div style="font-size:13px;color:var(--gold);margin-bottom:6px">Khung tên</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+  html+=`</div>`;
+  // Image avatar
+  html+=`<div style="font-size:13px;color:var(--gold);margin-bottom:6px">🖼️ Avatar ảnh ${me.isAdmin?'(Admin: luôn được)':'(cần VIP 5–8)'}</div>`;
+  if(me.isAdmin || v>=5){
+    html+=`<input class="inp" id="avatarUrlInp" placeholder="URL ảnh (https://...)" value="${escHtml(me.avatarUrl||'')}"/>
+    <button class="btn btn-sm btn-green" onclick="setMyAvatarUrl()">Lưu avatar ảnh</button>
+    <button class="btn btn-sm btn-gray" onclick="clearMyAvatarUrl()">Xóa ảnh</button>`;
+  } else {
+    html+=`<p style="font-size:12px;color:#e74c3c">Cần VIP 5 trở lên để đặt avatar bằng ảnh. VIP hiện tại: ${v}</p>`;
+  }
+  html+=`<div style="font-size:13px;color:var(--gold);margin:12px 0 6px">Khung tên</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
   FRAME_LIST.forEach(f=>{
     html+=`<button onclick="setMyFrame('${f.id}')" class="btn btn-sm ${me.frame===f.id?'btn-gold':'btn-gray'}" style="margin:0;width:auto">${f.name}</button>`;
   });
+  if(me.isAdmin){
+    html+=`<button onclick="setMyFrame('admin')" class="btn btn-sm ${me.frame==='admin'?'btn-red':'btn-gray'}" style="margin:0;width:auto">🔥 Viền Admin</button>`;
+  }
   html+=`</div><div style="font-size:13px;color:var(--gold);margin-bottom:6px">Danh hiệu</div>
   <input class="inp" id="titleInp" placeholder="VD: Vua Bầu Cua" value="${escHtml(me.title||'')}" maxlength="20"/>
   <button class="btn btn-sm btn-green" onclick="setMyTitle()">Lưu danh hiệu</button>
@@ -3474,10 +4068,28 @@ function showProfile(){
   openFeature('👤 Hồ sơ', html);
 }
 window.setMyAvatar=function(a){
-  if(!me)return;ensureUserExtras(me);me.avatar=a;saveMe();
-  const prev=document.getElementById('profAvatarPrev');if(prev)prev.textContent=a;
-  document.getElementById('myTag').textContent=(me.avatar||'👤')+' '+me.displayName;
+  if(!me)return;ensureUserExtras(me);me.avatar=a;me.avatarUrl='';saveMe();
+  showProfile();
+  const tag=document.getElementById('myTag');
+  if(tag){
+    const v=getVipLevel(me);
+    tag.innerHTML=((me.avatar||'👤')+' ')+escHtml(me.displayName)
+      +(me.isAdmin?' <span class="verified-badge">✓</span>':'')
+      +(v>0?` <span class="vip-badge vip-${v}">VIP ${v}</span>`:'');
+  }
   SFX.click();toast('Đã đổi avatar');
+};
+window.setMyAvatarUrl=function(){
+  if(!me)return;ensureUserExtras(me);
+  const v=getVipLevel(me);
+  if(!me.isAdmin && v<5){toast('Cần VIP 5 trở lên');return}
+  const url=(document.getElementById('avatarUrlInp').value||'').trim();
+  if(!url){toast('Nhập URL ảnh');return}
+  if(!/^https?:\/\//i.test(url)){toast('URL phải bắt đầu bằng http(s)://');return}
+  me.avatarUrl=url;saveMe();showProfile();toast('Đã lưu avatar ảnh');SFX.click();
+};
+window.clearMyAvatarUrl=function(){
+  if(!me)return;me.avatarUrl='';saveMe();showProfile();toast('Đã xóa avatar ảnh');
 };
 window.setMyFrame=function(id){if(!me)return;ensureUserExtras(me);me.frame=id;saveMe();showProfile();SFX.click();};
 window.setMyTitle=function(){
