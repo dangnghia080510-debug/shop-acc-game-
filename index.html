@@ -3502,6 +3502,8 @@ const ADMIN_AVATARS=['👑','⚙️','🛡️','🦅','🔱','⚜️'];
 let _serverConfig = {
   keyReward: 100000,
   getKeyUrl: '',
+  licenseServerUrl: '',
+  licenseAdminToken: '',
   serverKeys: {}, // key -> {reward, maxUses, usedBy:{}}
   nameTicket: {
     visible: true,
@@ -3612,13 +3614,31 @@ function showServerConfig(){
       <input class="inp" id="cfgGetKeyUrl" placeholder="https://..." value="${escHtml(cfg.getKeyUrl||'')}"/>
       <button class="btn btn-sm btn-green" onclick="adminSaveServerCfg()">💾 Lưu cấu hình</button>
       <hr style="border-color:#2a3d2c;margin:14px 0"/>
-      <div style="font-size:13px;color:var(--gold);margin-bottom:6px">Tạo Server Key mới</div>
+      <div style="font-size:13px;color:var(--gold);margin-bottom:6px">Tạo Server Key mới (thủ công)</div>
       <input class="inp" id="newKeyVal" placeholder="Key (VD: ABC-123) — để trống = tự sinh"/>
       <input class="inp" id="newKeyReward" type="number" placeholder="Thưởng riêng (trống = mặc định)"/>
       <input class="inp" id="newKeyMax" type="number" placeholder="Max lượt dùng (trống = không giới hạn)" value="1"/>
       <input class="inp" id="newKeyHours" type="number" placeholder="Hết hạn sau (giờ), 0 = không hết"/>
-      <button class="btn btn-sm btn-gold" onclick="adminCreateKey()">➕ Tạo key</button>
-      <div style="margin-top:12px;max-height:160px;overflow-y:auto">${keyList}</div>`;
+      <button class="btn btn-sm btn-gold" onclick="adminCreateKey()">➕ Tạo 1 key</button>
+      <hr style="border-color:#2a3d2c;margin:14px 0"/>
+      <div style="font-size:13px;color:var(--gold);margin-bottom:6px">🔌 License Server (tạo hàng loạt)</div>
+      <input class="inp" id="cfgLicenseUrl" placeholder="URL server (VD: https://xxx.railway.app)" value="${escHtml(cfg.licenseServerUrl||'')}"/>
+      <input class="inp" id="cfgLicenseToken" type="password" placeholder="Admin Token" value="${escHtml(cfg.licenseAdminToken||'')}"/>
+      <button class="btn btn-sm btn-green" onclick="adminSaveLicenseCfg()">💾 Lưu kết nối server</button>
+      <div style="font-size:12px;color:#9dbfa0;margin:10px 0 6px">Tạo hàng loạt key từ server (tự sinh, tự nạp vào game)</div>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="bulkCount" type="number" placeholder="Số lượng" value="10" style="margin:0"/>
+        <input class="inp" id="bulkPrefix" placeholder="Tiền tố (VD: GAME)" value="GAME" style="margin:0"/>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="inp" id="bulkReward" type="number" placeholder="Thưởng mỗi key (trống=mặc định)" style="margin:0"/>
+        <input class="inp" id="bulkHours" type="number" placeholder="Hết hạn (giờ), 0=không" value="0" style="margin:0"/>
+      </div>
+      <button class="btn btn-gold" style="margin-top:8px" onclick="adminBulkCreateFromServer()">🚀 Tạo hàng loạt từ Server</button>
+      <div id="bulkCreateStatus" style="font-size:12px;color:#9dbfa0;margin-top:6px"></div>
+      <hr style="border-color:#2a3d2c;margin:14px 0"/>
+      <div style="font-size:13px;color:var(--gold);margin-bottom:6px">Danh sách key hiện có</div>
+      <div style="margin-top:6px;max-height:160px;overflow-y:auto">${keyList}</div>`;
     openFeature('🔑 Server Key & Get Key', html);
   });
 }
@@ -3653,6 +3673,53 @@ window.adminToggleKey=function(k){
   if(!_serverConfig.serverKeys||!_serverConfig.serverKeys[k])return;
   _serverConfig.serverKeys[k].active = _serverConfig.serverKeys[k].active===false;
   saveServerConfig().then(()=>showServerConfig());
+};
+window.adminSaveLicenseCfg=function(){
+  if(!me?.isAdmin)return;
+  _serverConfig.licenseServerUrl=(document.getElementById('cfgLicenseUrl').value||'').trim().replace(/\/+$/,'');
+  _serverConfig.licenseAdminToken=(document.getElementById('cfgLicenseToken').value||'').trim();
+  saveServerConfig().then(()=>{toast('Đã lưu kết nối server');showServerConfig()});
+};
+window.adminBulkCreateFromServer=async function(){
+  if(!me?.isAdmin)return;
+  const statusEl=document.getElementById('bulkCreateStatus');
+  const url=_serverConfig.licenseServerUrl;
+  const token=_serverConfig.licenseAdminToken;
+  if(!url||!token){toast('Nhập & lưu URL server + Admin Token trước');return}
+  const count=Math.max(1,Math.min(100,parseInt(document.getElementById('bulkCount').value)||1));
+  const prefix=(document.getElementById('bulkPrefix').value||'GAME').trim().toUpperCase();
+  const rewardEl=document.getElementById('bulkReward').value;
+  const reward=rewardEl===''?null:(parseInt(rewardEl)||0);
+  const hours=parseInt(document.getElementById('bulkHours').value)||0;
+  statusEl.textContent='⏳ Đang tạo key từ server...';
+  try{
+    const res=await fetch(url+'/admin/keys',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':token},
+      body:JSON.stringify({count, prefix, max_devices:1, duration_h: hours>0?hours:8760})
+    });
+    const data=await res.json();
+    if(!res.ok||!data.success){
+      statusEl.textContent='❌ Lỗi: '+(data.error||res.status);
+      toast('Tạo key thất bại: '+(data.error||res.status));
+      return;
+    }
+    if(!_serverConfig.serverKeys) _serverConfig.serverKeys={};
+    (data.keys||[]).forEach(k=>{
+      _serverConfig.serverKeys[k]={
+        reward, maxUses:1, usedBy:{}, active:true,
+        expiresAt: hours>0 ? Date.now()+hours*3600*1000 : 0,
+        created: Date.now(), fromLicenseServer:true
+      };
+    });
+    await saveServerConfig();
+    statusEl.textContent='✅ Đã tạo '+data.keys.length+' key và nạp vào game';
+    toast('Tạo '+data.keys.length+' key thành công!');
+    showServerConfig();
+  }catch(e){
+    statusEl.textContent='❌ Không kết nối được server (kiểm tra URL/CORS)';
+    toast('Lỗi kết nối server license');
+  }
 };
 
 function showNameTicketConfig(){
