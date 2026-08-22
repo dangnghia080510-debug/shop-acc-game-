@@ -159,7 +159,23 @@ select.inp{appearance:none}
 .daga-impact{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:42px;opacity:0;pointer-events:none;z-index:5}
 .daga-impact.show{animation:dagaBoom .5s ease}
 @keyframes dagaBoom{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}}
+.daga-arena-fight{animation:dagaArenaPulse .6s ease-in-out infinite;box-shadow:inset 0 0 40px #0008,0 0 30px #e74c3c55}
+.daga-arena-done{box-shadow:inset 0 0 40px #0008,0 0 24px #f0c03066}
+@keyframes dagaArenaPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.15)}}
+.daga-sparks{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.daga-spark-particle{position:absolute;font-size:22px;animation:dagaSparkFly .55s ease-out forwards}
+@keyframes dagaSparkFly{0%{opacity:1;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(.4) translateY(-40px)}}
 @media(max-width:500px){.daga-rooster img{width:80px;height:80px}.daga-fighters{min-height:130px}}
+.entry-fx-overlay{position:fixed;inset:0;pointer-events:none;z-index:9990;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:radial-gradient(ellipse at center,#0000 30%,#000a 100%);animation:entryFade 2.8s ease forwards}
+.entry-fx-overlay .entry-name{font-size:28px;font-weight:900;color:var(--gold);text-shadow:0 0 20px #f0c030,0 4px 12px #000;animation:entryPop .6s ease}
+.entry-fx-overlay .entry-sub{font-size:14px;color:#9dbfa0}
+@keyframes entryFade{0%{opacity:0}15%{opacity:1}70%{opacity:1}100%{opacity:0}}
+@keyframes entryPop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.entry-fx-admin{background:radial-gradient(ellipse at center,#3a1a0088 0%,#000c 70%)}
+.entry-fx-admin .entry-name{color:#ff6b00;text-shadow:0 0 24px #ff6b00,0 0 40px #f0c030,0 4px 12px #000;font-size:32px}
+.entry-fx-fire .entry-name{color:#e74c3c;text-shadow:0 0 20px #e74c3c}
+.entry-fx-gold .entry-name{color:#f0c030;text-shadow:0 0 24px #f0c030}
+.entry-fx-rainbow .entry-name{background:linear-gradient(90deg,#e74c3c,#f0c030,#27a85f,#3498db,#9b59b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .status-msg{font-size:16px;font-weight:700;margin:10px 0;min-height:28px;color:var(--gold)}
 .pot-display{font-size:14px;color:#9dbfa0;margin-bottom:8px}
 .result-badge{font-size:20px;font-weight:900;margin-top:6px;min-height:28px}
@@ -295,6 +311,7 @@ select.inp{appearance:none}
         <button class="btn btn-sm btn-gray" onclick="showHistory()" style="margin:0">📜 Lịch sử</button>
         <button class="btn btn-sm btn-gray" onclick="showFriends()" style="margin:0">👥 Bạn bè</button>
         <button class="btn btn-sm btn-gray" onclick="showAchievements()" style="margin:0">🏅 Thành tựu</button>
+        <button class="btn btn-sm btn-gold" onclick="showShop()" style="margin:0">🛒 Cửa hàng</button>
         <button class="btn btn-sm btn-gold" onclick="showCreateTour()" style="margin:0;grid-column:1/-1">🏆 Tạo giải đấu (Tournament)</button>
       </div>
       <div id="adminMenuBtn" style="display:none;margin-top:10px">
@@ -308,7 +325,8 @@ select.inp{appearance:none}
       <h2>➕ Tạo phòng mới</h2>
       <div id="createErr" class="err"></div>
       <input class="inp" id="roomName" placeholder="Tên phòng"/>
-      <input class="inp" id="roomPass" placeholder="Mật khẩu phòng (bắt buộc)"/>
+      <input class="inp" id="roomPass" placeholder="Mật khẩu phòng (để trống = phòng công khai)"/>
+      <p style="font-size:12px;color:#6a9a70;margin:-6px 0 12px">Để trống mật khẩu → ai cũng vào được không cần pass</p>
       <select class="inp" id="gameType">
         <option value="baucua">🎲 Bầu Cua Tôm Cá — 1 đến 10 người</option>
         <option value="taixiu">🎲 Tài Xỉu — 1 đến 10 người</option>
@@ -372,7 +390,7 @@ select.inp{appearance:none}
       <h2>🔑 Vào phòng</h2>
       <div id="joinErr" class="err"></div>
       <input class="inp" id="joinId" placeholder="ID phòng (chỉ số, VD: 384291)"/>
-      <input class="inp" id="joinPass" type="password" placeholder="Mật khẩu phòng"/>
+      <input class="inp" id="joinPass" type="password" placeholder="Mật khẩu (bỏ trống nếu phòng công khai)"/>
       <button class="btn btn-gold" onclick="joinRoom()">Vào phòng</button>
       <button class="btn btn-gray" onclick="backToMenu()">← Quay lại</button>
     </div>
@@ -808,6 +826,9 @@ function logout(){
 // ======================================================
 let inRoom=null;
 let selectedPlayers={};
+let _lastRoomPlayers=[];
+let _dagaFxStarted=false;
+let _dagaResolveTimer=null;
 
 function genId(){
   // ID phòng chỉ gồm số, 6 chữ số (100000–999999)
@@ -866,14 +887,15 @@ function createRoom(){
   const pass=document.getElementById('roomPass').value;
   const gameType=document.getElementById('gameType').value;
   const max=parseInt(document.getElementById('maxPlayers').value)||10;
-  if(!name||!pass){showErr('createErr','Điền đầy đủ thông tin');return}
+  if(!name){showErr('createErr','Nhập tên phòng');return}
   const id=genId();
-  const room={id,name,pass,gameType,max,bet:0,host:me.username,players:[me.username],
-    spectators:[],status:'waiting',gameState:null,chat:[],created:Date.now()};
+  const room={id,name,pass:pass||'',gameType,max,bet:0,host:me.username,players:[me.username],
+    spectators:[],status:'waiting',gameState:null,chat:[],created:Date.now(),public:!pass};
   updateRoom(id,room);
   inRoom=id;
   enterRoom(id);
   SFX.join();
+  toast(pass?'Phòng khóa 🔒':'Phòng công khai 🔓 — ai cũng vào được');
 }
 
 async function joinRoom(){
@@ -882,7 +904,7 @@ async function joinRoom(){
     if(!me){showErr('joinErr','Hãy đăng nhập trước');return}
     let id=document.getElementById('joinId').value.trim().replace(/\s/g,'');
     const pass=document.getElementById('joinPass').value;
-    if(!id||!pass){showErr('joinErr','Nhập ID và mật khẩu phòng');return}
+    if(!id){showErr('joinErr','Nhập ID phòng');return}
     let room=getRoom(id);
     if(!room&&getRooms()){
       const all=getRooms();
@@ -890,7 +912,8 @@ async function joinRoom(){
       if(key){id=key;room=all[key]}
     }
     if(!room){showErr('joinErr','Phòng không tồn tại (ID: '+id+')');return}
-    if(String(room.pass)!==String(pass)){showErr('joinErr','Sai mật khẩu phòng');return}
+    const roomPass=String(room.pass||'');
+    if(roomPass && roomPass!==String(pass)){showErr('joinErr','Sai mật khẩu phòng');return}
     if(!room.players)room.players=[];
     if(!room.spectators)room.spectators=[];
     if(room.players.includes(me.username)||room.spectators.includes(me.username)){
@@ -949,18 +972,20 @@ function renderRoomBrowser(){
     const st=r.status==='playing'?'🎮 Đang chơi':'⏳ Chờ';
     const nSpec=(r.spectators||[]).length;
     const isTour=!!(r.tournament&&r.tournament.active);
-    div.innerHTML=`<div><div class="rname">${escHtml(r.name)} ${isTour?'🏆':''}<span class="lock-icon">🔒</span></div>
-      <div class="rinfo">${isTour?'Giải · ':''}${gameTypeLabel(r.gameType)} · ${r.players.length}/${r.max} người · ${st}${full?' · Đầy':''}${nSpec?` · ${nSpec} đang xem`:''}${isTour?` · Quỹ ${fmtVnd(r.tournament.pot||0)}`:''}</div>
+    const isPublic=!r.pass;
+    div.innerHTML=`<div><div class="rname">${escHtml(r.name)} ${isTour?'🏆':''}<span class="lock-icon">${isPublic?'🔓':'🔒'}</span></div>
+      <div class="rinfo">${isTour?'Giải · ':''}${gameTypeLabel(r.gameType)} · ${r.players.length}/${r.max} người · ${st}${full?' · Đầy':''}${nSpec?` · ${nSpec} đang xem`:''}${isTour?` · Quỹ ${fmtVnd(r.tournament.pot||0)}`:''}${isPublic?' · Công khai':''}</div>
       <div class="rinfo">ID: <strong>${r.id}</strong></div></div>
-      <button class="btn btn-sm ${full?'btn-gray':'btn-green'}" onclick="quickJoinRoom('${r.id}')">${full?'👁 Xem':'Vào'}</button>`;
+      <button class="btn btn-sm ${full?'btn-gray':'btn-green'}" onclick="quickJoinRoom('${r.id}',${isPublic?'true':'false'})">${full?'👁 Xem':'Vào'}</button>`;
     el.appendChild(div);
   });
 }
 
-function quickJoinRoom(id){
+function quickJoinRoom(id,isPublic){
   document.getElementById('roomBrowser').style.display='none';
   document.getElementById('joinRoom').style.display='block';
   document.getElementById('joinId').value=id;
+  if(isPublic){document.getElementById('joinPass').value='';}
 }
 
 function enterRoom(id){
@@ -974,6 +999,7 @@ function enterRoom(id){
   gr.style.display='flex';
   refreshRoom();
   startRoomPolling();
+  if(me){ensureUserExtras(me);setTimeout(()=>playEntryFx(me),350)}
 }
 
 let roomPollTimer=null;
@@ -998,6 +1024,9 @@ function leaveRoom(){
     }
   }
   inRoom=null;stopPolling();
+  _lastRoomPlayers=[];
+  _dagaFxStarted=false;
+  if(_dagaResolveTimer){clearTimeout(_dagaResolveTimer);_dagaResolveTimer=null}
   const gr=document.getElementById('gameRoom');
   gr.classList.remove('show');
   gr.style.display='none';
@@ -1029,7 +1058,7 @@ function refreshRoom(){
   const specTag=isSpectator(room)?' · 👁 Đang xem':'';
   const tourTag=isTour?` · Vòng ${room.tournament.currentRound}/${room.tournament.rounds} · Quỹ ${fmtVnd(room.tournament.pot||0)}`:'';
   document.getElementById('roomSubDisp').textContent=gameTypeLabel(room.gameType)+(isTour?'':' · Tự chọn mức cược (VND)')+tourTag+specTag;
-  document.getElementById('roomIdDisp').textContent='ID: '+room.id+' 🔒';
+  document.getElementById('roomIdDisp').textContent='ID: '+room.id+(room.pass?' 🔒':' 🔓 Công khai');
   let sfxEl=document.getElementById('sfxBtn');
   if(!sfxEl){
     const hdr=document.querySelector('.room-header > div:last-child');
@@ -1054,6 +1083,17 @@ function refreshRoom(){
       if(typeof tourOnRoundEnd==='function') tourOnRoundEnd(results);
     },2500);
   }
+  const curPlayers=room.players||[];
+  if(_lastRoomPlayers.length && inRoom){
+    curPlayers.forEach(p=>{
+      if(p!==me.username && !_lastRoomPlayers.includes(p)){
+        const u=getUsers()[p];
+        if(u) setTimeout(()=>playEntryFx(u),200);
+      }
+    });
+  }
+  _lastRoomPlayers=curPlayers.slice();
+
   if(room.status==='waiting')renderWaiting(room);
   else if(room.gameType==='baucua')renderBauCua(room);
   else if(room.gameType==='taixiu')renderTaiXiu(room);
@@ -1461,12 +1501,15 @@ function renderXidach(room){
   const users = getUsers();
   const isHost = room.host === me.username;
   const myBetObj = gs.bets && gs.bets[me.username];
-  const myBet = (myBetObj && (myBetObj.main || myBetObj)) | 0 || (typeof myBetObj === 'number' ? myBetObj : 0);
+  let myBet = 0;
+  if(typeof myBetObj === 'number') myBet = myBetObj;
+  else if(myBetObj && typeof myBetObj === 'object') myBet = Number(myBetObj.main) || 0;
   const phase = gs.phase || 'betting';
   const hands = gs.hands || {};
-  const dealerHand = hands.dealer || [];
-  const myHand = hands[me.username] || [];
-  const turnOrder = gs.turnOrder || [];
+  const dealerHand = Array.isArray(hands.dealer) ? hands.dealer : (hands.dealer ? Object.values(hands.dealer) : []);
+  let myHand = hands[me.username];
+  if(!Array.isArray(myHand)) myHand = myHand ? Object.values(myHand) : [];
+  const turnOrder = Array.isArray(gs.turnOrder) ? gs.turnOrder : (gs.turnOrder ? Object.values(gs.turnOrder) : []);
   const curIdx = gs.currentTurnIndex || 0;
   const currentPlayer = turnOrder[curIdx] || null;
   const isMyTurn = phase === 'playing' && currentPlayer === me.username;
@@ -1543,7 +1586,8 @@ function renderXidach(room){
     html += `<div style="margin-top:16px;width:100%"><div class="pname" style="margin-bottom:8px">Bài tất cả người chơi</div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">`;
     turnOrder.forEach(p => {
-      const h = hands[p] || [];
+      let h = hands[p];
+      if(!Array.isArray(h)) h = h ? Object.values(h) : [];
       const score = bjHandScore(h);
       const u = users[p] || {displayName: p};
       const res = (gs.results && gs.results[p]) || null;
@@ -1551,7 +1595,7 @@ function renderXidach(room){
         <div style="font-size:12px;color:var(--gold);font-weight:700;margin-bottom:4px">${escHtml(u.displayName)}</div>
         <div class="mini-cards">${h.map(c => {
           const red = bjIsRed(c) ? ' red-card' : '';
-          return `<div class="mini-card${red}">${c.slice(0,-1)}${c.slice(-1)}</div>`;
+          return `<div class="mini-card${red}">${String(c).slice(0,-1)}${String(c).slice(-1)}</div>`;
         }).join('')}</div>
         <div class="score-badge">${score > 21 ? 'QUẮC' : score + ' điểm'}</div>
         ${res ? `<div style="font-size:11px;margin-top:4px;color:${res.net>0?'#27a85f':res.net<0?'#e74c3c':'var(--gold)'}">${res.net>0?'+':''}${fmtVnd(res.net)}</div>` : ''}
@@ -1564,7 +1608,8 @@ function renderXidach(room){
       <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center">`;
     turnOrder.forEach(p => {
       if(p === me.username) return;
-      const h = hands[p] || [];
+      let h = hands[p];
+      if(!Array.isArray(h)) h = h ? Object.values(h) : [];
       const u = users[p] || {displayName: p};
       const isCur = phase === 'playing' && p === currentPlayer;
       html += `<div style="background:#0d1f0f66;border:2px solid ${isCur ? 'var(--gold)' : 'var(--border)'};border-radius:12px;padding:8px 12px;min-width:90px;text-align:center">
@@ -1631,7 +1676,7 @@ window.bjDeal = function(){
     hands.dealer.push(deck.pop());
   }
   gs.deck = deck; gs.hands = hands; gs.turnOrder = bettors.slice();
-  gs.currentTurnIndex = 0; gs.dealerHidden = true; gs.results = {}; gs.phase = 'playing';
+  gs.currentTurnIndex = 0; gs.dealerHidden = true; gs.results = {}; gs.stood = {}; gs.phase = 'playing';
   room.gameState = gs; updateRoom(inRoom, room);
   SFX.start(); speak('Chia bài');
   setTimeout(() => bjCheckAutoStand(), 400);
@@ -1641,13 +1686,16 @@ function bjNextTurn(){
   if(!room || room.host !== me.username) return;
   const gs = room.gameState;
   if(!gs || gs.phase !== 'playing') return;
+  const turnOrder = Array.isArray(gs.turnOrder) ? gs.turnOrder : Object.values(gs.turnOrder||{});
   let idx = (gs.currentTurnIndex || 0) + 1;
-  while(idx < gs.turnOrder.length){
-    const p = gs.turnOrder[idx];
-    if(bjHandScore(gs.hands[p] || []) <= 21) break;
+  while(idx < turnOrder.length){
+    const p = turnOrder[idx];
+    let h = gs.hands[p];
+    if(!Array.isArray(h)) h = h ? Object.values(h) : [];
+    if(bjHandScore(h) <= 21) break;
     idx++;
   }
-  if(idx >= gs.turnOrder.length){
+  if(idx >= turnOrder.length){
     gs.phase = 'dealer'; gs.dealerHidden = false; gs.currentTurnIndex = idx;
     room.gameState = gs; updateRoom(inRoom, room);
     setTimeout(() => bjDealerPlay(), 600);
@@ -1658,42 +1706,52 @@ function bjNextTurn(){
 function bjCheckAutoStand(){
   const room = getRoom(inRoom); if(!room) return;
   const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
-  const cur = gs.turnOrder[gs.currentTurnIndex]; if(!cur) return;
-  if(bjHandScore(gs.hands[cur] || []) >= 21 && room.host === me.username) setTimeout(() => bjNextTurn(), 500);
+  const turnOrder = Array.isArray(gs.turnOrder) ? gs.turnOrder : Object.values(gs.turnOrder||{});
+  const cur = turnOrder[gs.currentTurnIndex]; if(!cur) return;
+  let h = gs.hands[cur];
+  if(!Array.isArray(h)) h = h ? Object.values(h) : [];
+  if(bjHandScore(h) >= 21 && room.host === me.username) setTimeout(() => bjNextTurn(), 500);
 }
 window.bjHit = function(){
   const room = getRoom(inRoom); if(!room || !canBetNow(room)) return;
   const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
-  const cur = gs.turnOrder[gs.currentTurnIndex];
+  const turnOrder = Array.isArray(gs.turnOrder) ? gs.turnOrder : Object.values(gs.turnOrder||{});
+  const cur = turnOrder[gs.currentTurnIndex];
   if(cur !== me.username){ toast('Chưa đến lượt bạn'); return; }
-  if(!gs.deck || gs.deck.length === 0){ toast('Hết bài trong bộ'); return; }
-  const card = gs.deck.pop();
-  if(!gs.hands[me.username]) gs.hands[me.username] = [];
-  gs.hands[me.username].push(card);
-  room.gameState = gs; updateRoom(inRoom, room); SFX.click();
-  const score = bjHandScore(gs.hands[me.username]);
-  if(score > 21){ SFX.lose(); speak('Quắc'); if(room.host === me.username) setTimeout(() => bjNextTurn(), 700); }
-  else if(score === 21){ speak('Xì'); if(room.host === me.username) setTimeout(() => bjNextTurn(), 700); }
+  let deck = Array.isArray(gs.deck) ? gs.deck : (gs.deck ? Object.values(gs.deck) : []);
+  if(deck.length === 0){ toast('Hết bài trong bộ'); return; }
+  const card = deck.pop();
+  gs.deck = deck;
+  let myH = gs.hands[me.username];
+  if(!Array.isArray(myH)) myH = myH ? Object.values(myH) : [];
+  myH.push(card);
+  gs.hands[me.username] = myH;
+  room.gameState = gs; updateRoom(inRoom, room); SFX.deal();
+  const score = bjHandScore(myH);
+  if(score > 21){ SFX.lose(); speak('Quắc'); if(!gs.stood) gs.stood={}; gs.stood[me.username]=true; room.gameState=gs; updateRoom(inRoom,room); }
+  else if(score === 21){ speak('Xì'); if(!gs.stood) gs.stood={}; gs.stood[me.username]=true; room.gameState=gs; updateRoom(inRoom,room); }
 };
 window.bjStand = function(){
   const room = getRoom(inRoom); if(!room || !canBetNow(room)) return;
   const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
-  const cur = gs.turnOrder[gs.currentTurnIndex];
+  const turnOrder = Array.isArray(gs.turnOrder) ? gs.turnOrder : Object.values(gs.turnOrder||{});
+  const cur = turnOrder[gs.currentTurnIndex];
   if(cur !== me.username){ toast('Chưa đến lượt bạn'); return; }
   SFX.click();
-  if(room.host === me.username) bjNextTurn();
-  else {
-    if(!gs.stood) gs.stood = {};
-    gs.stood[me.username] = true;
-    room.gameState = gs; updateRoom(inRoom, room);
-  }
+  if(!gs.stood) gs.stood = {};
+  gs.stood[me.username] = true;
+  room.gameState = gs; updateRoom(inRoom, room);
+  if(room.host === me.username) setTimeout(()=>bjNextTurn(), 300);
 };
 let _bjAdvancing = false;
 function bjHostWatchTurn(room){
   if(!room || room.host !== me.username || _bjAdvancing) return;
   const gs = room.gameState; if(!gs || gs.phase !== 'playing') return;
-  const cur = gs.turnOrder[gs.currentTurnIndex]; if(!cur) return;
-  const score = bjHandScore(gs.hands[cur] || []);
+  const turnOrder = Array.isArray(gs.turnOrder) ? gs.turnOrder : Object.values(gs.turnOrder||{});
+  const cur = turnOrder[gs.currentTurnIndex]; if(!cur) return;
+  let h = gs.hands[cur];
+  if(!Array.isArray(h)) h = h ? Object.values(h) : [];
+  const score = bjHandScore(h);
   const stood = gs.stood && gs.stood[cur];
   if(score > 21 || score === 21 || stood){
     _bjAdvancing = true;
@@ -1704,26 +1762,33 @@ function bjHostWatchTurn(room){
 function bjDealerPlay(){
   const room = getRoom(inRoom); if(!room || room.host !== me.username) return;
   const gs = room.gameState; if(!gs || gs.phase !== 'dealer') return;
-  while(bjHandScore(gs.hands.dealer || []) < 17 && gs.deck && gs.deck.length){
-    gs.hands.dealer.push(gs.deck.pop());
+  let dealer = Array.isArray(gs.hands.dealer) ? gs.hands.dealer : (gs.hands.dealer ? Object.values(gs.hands.dealer) : []);
+  let deck = Array.isArray(gs.deck) ? gs.deck : (gs.deck ? Object.values(gs.deck) : []);
+  while(bjHandScore(dealer) < 17 && deck.length){
+    dealer.push(deck.pop());
   }
+  gs.hands.dealer = dealer;
+  gs.deck = deck;
   gs.dealerHidden = false; room.gameState = gs; updateRoom(inRoom, room);
   setTimeout(() => bjSettle(), 900);
 }
 function bjSettle(){
   const room = getRoom(inRoom); if(!room || room.host !== me.username) return;
   const gs = room.gameState; if(!gs) return;
-  const dealerScore = bjHandScore(gs.hands.dealer || []);
+  let dealerHand = Array.isArray(gs.hands.dealer) ? gs.hands.dealer : (gs.hands.dealer ? Object.values(gs.hands.dealer) : []);
+  const dealerScore = bjHandScore(dealerHand);
   const dealerBust = dealerScore > 21;
   const users = getUsers();
   const results = {};
   let hostDelta = 0;
   const hostUser = room.host;
-  (gs.turnOrder || []).forEach(p => {
-    const hand = gs.hands[p] || [];
+  const turnOrderSettle = Array.isArray(gs.turnOrder) ? gs.turnOrder : Object.values(gs.turnOrder||{});
+  turnOrderSettle.forEach(p => {
+    let hand = gs.hands[p];
+    if(!Array.isArray(hand)) hand = hand ? Object.values(hand) : [];
     const score = bjHandScore(hand);
     const b = gs.bets && gs.bets[p];
-    const staked = (b && typeof b === 'object') ? (b.main || 0) : (Number(b) || 0);
+    const staked = (b && typeof b === 'object') ? (Number(b.main) || 0) : (Number(b) || 0);
     let net = -staked, winAmount = 0;
     if(score > 21) net = -staked;
     else if(dealerBust){ winAmount = staked * 2; net = staked; }
@@ -2309,6 +2374,47 @@ function startDaGa(room,users){
   room.gameState={phase:'betting',bets:{},winner:null,results:{}};
   updateRoom(inRoom,room);
 }
+let _dagaFxStartedFlag=false; // use global _dagaFxStarted
+function dagaResolveFight(room){
+  if(!room||!room.gameState||room.gameState.phase!=='fighting')return;
+  if(room.host!==me.username)return;
+  const gs=room.gameState;
+  const winner = Math.random() < 0.5 ? 'a' : 'b';
+  const odds = {a:2, b:2};
+  const users=getUsers();
+  const results={};
+  let hostDelta=0;
+  const hostUser=room.host;
+  room.players.forEach(p=>{
+    const mine=gs.bets[p]||{};
+    let staked=0, returned=0;
+    Object.keys(mine).forEach(g=>{
+      const amt=mine[g]||0;
+      staked+=amt;
+      if(g===winner) returned+=amt*odds[g];
+    });
+    const net=returned-staked;
+    results[p]={net};
+    if(users[p]&&returned>0) users[p].coins=(users[p].coins||0)+returned;
+    if(p!==hostUser) hostDelta-=net;
+  });
+  if(users[hostUser]) users[hostUser].coins=Math.max(0,(users[hostUser].coins||0)+hostDelta);
+  saveUsers(users);
+  gs.winner=winner;
+  gs.results=results;
+  gs.phase='done';
+  gs.fightEnd=Date.now();
+  room.gameState=gs;
+  updateRoom(inRoom,room);
+  _dagaFxStarted=false;
+  if(_dagaResolveTimer){clearTimeout(_dagaResolveTimer);_dagaResolveTimer=null}
+  const myNet=results[me.username]?.net||0;
+  if(myNet>0){SFX.win();speak('Thắng rồi!');if(typeof fxConfetti==='function')fxConfetti(['🐓','🏆','💰','✨'])}
+  else if(myNet<0){SFX.lose();speak('Thua rồi')}
+  if(typeof pushHistory==='function' && me){
+    pushHistory('Đá Gà', myNet, winner==='a'?'Gà A':'Gà B');
+  }
+}
 function renderDaGa(room){
   const gs=room.gameState||{};
   const gc=document.getElementById('gameContent');
@@ -2317,7 +2423,14 @@ function renderDaGa(room){
   const phase=gs.phase||'betting';
   const win=gs.winner;
 
-  // Class trạng thái cho từng gà
+  if(phase==='fighting' && isHost && gs.fightStart){
+    const elapsed=Date.now()-(gs.fightStart||0);
+    if(elapsed>=2800 && !_dagaResolveTimer){
+      _dagaResolveTimer=setTimeout(()=>dagaResolveFight(getRoom(inRoom)||room),50);
+    }
+  }
+  if(phase!=='fighting') _dagaFxStarted=false;
+
   let clsA='idle', clsB='idle';
   if(phase==='fighting'){ clsA='fighting'; clsB='fighting'; }
   else if(phase==='done'){
@@ -2328,8 +2441,9 @@ function renderDaGa(room){
   let html=`<div class="tl-table">
   <div class="center-area" style="padding-bottom:8px">
     <div class="pname" style="margin-bottom:10px">🐓 Đá Gà — Gà A vs Gà B</div>
-    <div class="daga-arena">
+    <div class="daga-arena${phase==='fighting'?' daga-arena-fight':''}${phase==='done'?' daga-arena-done':''}">
       <div class="daga-floor"></div>
+      <div class="daga-sparks" id="dagaSparks"></div>
       <div class="daga-fighters">
         <div class="daga-rooster side-a ${clsA}">
           <img src="${DAGA_ROOSTER_IMG}" alt="Gà A" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
@@ -2397,19 +2511,31 @@ function renderDaGa(room){
   html+=`</div></div>`;
   gc.innerHTML=html;
 
-  // Hiệu ứng va chạm khi đang đá
-  if(phase==='fighting'){
+  if(phase==='fighting' && !_dagaFxStarted){
+    _dagaFxStarted=true;
     const imp=document.getElementById('dagaImpact');
+    const sparks=document.getElementById('dagaSparks');
     if(imp){
       let n=0;
       const t=setInterval(()=>{
+        const r2=getRoom(inRoom);
+        if(!r2||!r2.gameState||r2.gameState.phase!=='fighting'){clearInterval(t);return}
         imp.classList.remove('show');
         void imp.offsetWidth;
         imp.classList.add('show');
-        if(++n>=4) clearInterval(t);
-      },450);
+        if(sparks){
+          const sp=document.createElement('div');
+          sp.className='daga-spark-particle';
+          sp.textContent=['💥','✨','💢','🔥'][n%4];
+          sp.style.left=(30+Math.random()*40)+'%';
+          sp.style.top=(20+Math.random()*50)+'%';
+          sparks.appendChild(sp);
+          setTimeout(()=>sp.remove(),600);
+        }
+        if(++n>=6) clearInterval(t);
+      },380);
     }
-    if(typeof fxShake==='function') setTimeout(()=>fxShake(),300);
+    if(typeof fxShake==='function') setTimeout(()=>fxShake(),200);
   }
 }
 window.dagaSetChip=function(v){
@@ -2443,42 +2569,17 @@ window.dagaFight=function(){
   const gs=room.gameState;if(!gs||gs.phase!=='betting')return;
   SFX.roll();speak('Bắt đầu đá gà');
   if(typeof fxShake==='function') fxShake();
-  gs.phase='fighting';room.gameState=gs;updateRoom(inRoom,room);
-  setTimeout(()=>{
-    // Chỉ A hoặc B — 50/50, không hòa
-    const winner = Math.random() < 0.5 ? 'a' : 'b';
-    const odds = {a:2, b:2};
-    const users=getUsers();
-    const results={};
-    let hostDelta=0;
-    const hostUser=room.host;
-    room.players.forEach(p=>{
-      const mine=gs.bets[p]||{};
-      let staked=0, returned=0;
-      Object.keys(mine).forEach(g=>{
-        const amt=mine[g]||0;
-        staked+=amt;
-        if(g===winner) returned+=amt*odds[g];
-      });
-      const net=returned-staked;
-      results[p]={net};
-      if(users[p]&&returned>0) users[p].coins=(users[p].coins||0)+returned;
-      if(p!==hostUser) hostDelta-=net;
-    });
-    if(users[hostUser]) users[hostUser].coins=Math.max(0,(users[hostUser].coins||0)+hostDelta);
-    saveUsers(users);
-    gs.winner=winner;
-    gs.results=results;
-    gs.phase='done';
-    room.gameState=gs;
-    updateRoom(inRoom,room);
-    const myNet=results[me.username]?.net||0;
-    if(myNet>0){SFX.win();speak('Thắng rồi!')}
-    else if(myNet<0){SFX.lose();speak('Thua rồi')}
-    if(typeof pushHistory==='function' && me){
-      pushHistory('Đá Gà', myNet, winner==='a'?'Gà A':'Gà B');
-    }
-  },2400);
+  _dagaFxStarted=false;
+  if(_dagaResolveTimer){clearTimeout(_dagaResolveTimer);_dagaResolveTimer=null}
+  gs.phase='fighting';
+  gs.fightStart=Date.now();
+  gs.winner=null;
+  room.gameState=gs;
+  updateRoom(inRoom,room);
+  _dagaResolveTimer=setTimeout(()=>{
+    _dagaResolveTimer=null;
+    dagaResolveFight(getRoom(inRoom)||room);
+  },2600);
 };
 
 // ======================================================
@@ -2641,12 +2742,9 @@ window.minesCashout=async function(){
 // ======================================================
 let duaChipValue=1000;
 const DUA_RACERS=[
-  {id:'n1',icon:'🐴',name:'Ngựa 1',odds:3.2},
-  {id:'n2',icon:'🦄',name:'Ngựa 2',odds:4.5},
-  {id:'n3',icon:'🐕',name:'Chó 1',odds:2.8},
-  {id:'n4',icon:'🐺',name:'Chó 2',odds:5.0},
-  {id:'n5',icon:'🐯',name:'Hổ',odds:6.5},
-  {id:'n6',icon:'🐉',name:'Rồng',odds:8.0}
+  {id:'n1',icon:'🐴',name:'Ngựa Đen',odds:2.5},
+  {id:'n2',icon:'🦄',name:'Ngựa Trắng',odds:3.2},
+  {id:'n3',icon:'🐕',name:'Chó Sói',odds:4.0}
 ];
 function startDuaNgua(room,users){
   room.status='playing';
@@ -2681,7 +2779,7 @@ function renderDuaNgua(room){
   html+=`<div class="status-msg"><div class="turn-indicator">${gs.phase==='betting'?'💰 Đặt cược vào vận động viên':gs.phase==='racing'?'🏃 Đang đua...':'✅ Kết thúc'}</div></div>`;
   html+=`<div class="center-area"><div class="bet-row">`;
   CHIP_VALUES.forEach(v=>{html+=`<div class="chip c${v}${duaChipValue===v?' chip-selected':''}" onclick="duaSetChip(${v})">${chipLabel(v)}</div>`});
-  html+=`</div><div class="bc-board" style="grid-template-columns:repeat(3,1fr)">`;
+  html+=`</div><div class="bc-board" style="grid-template-columns:repeat(3,1fr);max-width:420px">`;
   DUA_RACERS.forEach(s=>{
     const myAmt=myBets[s.id]||0;
     const disabled=gs.phase!=='betting';
@@ -2769,7 +2867,7 @@ window.duaStartRace=function(){
       gs.winner=winner;gs.results=results;gs.phase='done';
       room.gameState=gs;updateRoom(inRoom,room);
       const myNet=results[me.username]?.net||0;
-      if(myNet>0){SFX.win();speak('Thắng lớn!')}else if(myNet<0){SFX.lose();speak('Thua cuộc')}
+      if(myNet>0){SFX.win();speak('Thắng lớn!');if(typeof fxConfetti==='function')fxConfetti(['🏆','🏇','💰','⭐'])}else if(myNet<0){SFX.lose();speak('Thua cuộc')}
     }
   },200);
 };
@@ -3105,8 +3203,181 @@ function ensureUserExtras(u){
   if(!u.history)u.history=[];
   if(!u.achievements)u.achievements={};
   if(!u.stats)u.stats={wins:0,games:0,checkins:0,maxCrash:0,maxMines:0};
+  if(!u.inventory)u.inventory={avatars:[],titles:[],entryFx:['none']};
+  if(!u.entryFx)u.entryFx='none';
   return u;
 }
+
+const SHOP_ITEMS=[
+  {id:'av_dragon',type:'avatar',icon:'🐲',name:'Rồng Vàng',price:80000,desc:'Avatar đặc biệt'},
+  {id:'av_crown',type:'avatar',icon:'👑',name:'Vương Miện',price:120000,desc:'Avatar đặc biệt'},
+  {id:'av_robot',type:'avatar',icon:'🤖',name:'Robot',price:60000,desc:'Avatar đặc biệt'},
+  {id:'av_ghost',type:'avatar',icon:'👻',name:'Ma Quỷ',price:50000,desc:'Avatar đặc biệt'},
+  {id:'av_alien',type:'avatar',icon:'👽',name:'Alien',price:70000,desc:'Avatar đặc biệt'},
+  {id:'av_diamond',type:'avatar',icon:'💎',name:'Kim Cương',price:150000,desc:'Avatar đặc biệt'},
+  {id:'ti_vua',type:'title',icon:'👑',name:'Vua Bài',price:100000,desc:'Danh hiệu'},
+  {id:'ti_ca',type:'title',icon:'🐋',name:'Cá Mập',price:80000,desc:'Danh hiệu'},
+  {id:'ti_than',type:'title',icon:'⚡',name:'Thần Bài',price:200000,desc:'Danh hiệu'},
+  {id:'ti_pro',type:'title',icon:'🎯',name:'Pro Gamer',price:50000,desc:'Danh hiệu'},
+  {id:'fx_fire',type:'entryFx',icon:'🔥',name:'Hiệu ứng Lửa',price:100000,desc:'Vào phòng kèm lửa'},
+  {id:'fx_gold',type:'entryFx',icon:'✨',name:'Hiệu ứng Vàng',price:80000,desc:'Vào phòng lấp lánh'},
+  {id:'fx_rainbow',type:'entryFx',icon:'🌈',name:'Hiệu ứng Cầu vồng',price:150000,desc:'Vào phòng cầu vồng'}
+];
+
+function showShop(){
+  if(!me){toast('Hãy đăng nhập');return}
+  ensureUserExtras(me);
+  const inv=me.inventory||{avatars:[],titles:[],entryFx:['none']};
+  let html=`<div style="font-size:12px;color:#9dbfa0;text-align:center;margin-bottom:10px">Mua bằng tiền ảo VND · Số dư: <b style="color:var(--gold)">${fmtVnd(me.coins||0)}</b></div>`;
+  if(me.isAdmin){
+    html+=`<div style="background:#3a1a00;border:1px solid #ff6b00;border-radius:10px;padding:10px;margin-bottom:12px;text-align:center">
+      <div style="font-size:22px">⚙️👑</div>
+      <div style="color:#ff6b00;font-weight:900">Hiệu ứng Admin — độc quyền</div>
+      <div style="font-size:11px;color:#9dbfa0;margin-top:4px">Tự động hiện khi Admin vào phòng — không bán trong shop</div>
+      <button class="btn btn-sm btn-red" style="margin-top:8px" onclick="equipEntryFx('fx_admin')">Bật FX Admin</button>
+    </div>`;
+  }
+  html+=`<div style="font-size:13px;color:var(--gold);margin:8px 0 6px">🎭 Avatar đặc biệt</div>`;
+  SHOP_ITEMS.filter(i=>i.type==='avatar').forEach(item=>{
+    const owned=(inv.avatars||[]).includes(item.id);
+    html+=shopItemRow(item,owned);
+  });
+  html+=`<div style="font-size:13px;color:var(--gold);margin:12px 0 6px">🏅 Danh hiệu</div>`;
+  SHOP_ITEMS.filter(i=>i.type==='title').forEach(item=>{
+    const owned=(inv.titles||[]).includes(item.id);
+    html+=shopItemRow(item,owned);
+  });
+  html+=`<div style="font-size:13px;color:var(--gold);margin:12px 0 6px">✨ Hiệu ứng vào phòng</div>`;
+  SHOP_ITEMS.filter(i=>i.type==='entryFx').forEach(item=>{
+    const owned=(inv.entryFx||[]).includes(item.id);
+    html+=shopItemRow(item,owned);
+  });
+  html+=`<div style="font-size:13px;color:var(--gold);margin:14px 0 6px">🎒 Đang trang bị</div>
+  <div style="font-size:13px;color:#9dbfa0;margin-bottom:6px">Avatar: ${me.avatar||'—'} · Danh hiệu: ${escHtml(me.title||'—')} · FX: ${me.entryFx||'none'}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px">
+    <button class="btn btn-sm btn-gray" style="margin:0" onclick="equipEntryFx('none')">FX: Không</button>
+    ${(inv.entryFx||[]).filter(x=>x!=='none').map(id=>{
+      const it=SHOP_ITEMS.find(s=>s.id===id);
+      return `<button class="btn btn-sm ${me.entryFx===id?'btn-gold':'btn-gray'}" style="margin:0" onclick="equipEntryFx('${id}')">${it?it.icon+' '+it.name:id}</button>`;
+    }).join('')}
+    ${me.isAdmin?`<button class="btn btn-sm ${me.entryFx==='fx_admin'?'btn-gold':'btn-red'}" style="margin:0" onclick="equipEntryFx('fx_admin')">⚙️ Admin FX</button>`:''}
+  </div>`;
+  openFeature('🛒 Cửa hàng', html);
+}
+function shopItemRow(item,owned){
+  return `<div style="display:flex;align-items:center;gap:10px;padding:10px;background:#0d1f0f;border-radius:10px;margin-bottom:6px;border:1px solid ${owned?'var(--gold)':'var(--border)'}">
+    <span style="font-size:28px">${item.icon}</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:700;color:var(--gold)">${item.name}</div>
+      <div style="font-size:11px;color:#9dbfa0">${item.desc} · ${fmtVnd(item.price)}</div>
+    </div>
+    ${owned
+      ? (item.type==='avatar'
+          ? `<button class="btn btn-sm btn-green" style="margin:0" onclick="equipShopAvatar('${item.id}')">Dùng</button>`
+          : item.type==='title'
+            ? `<button class="btn btn-sm btn-green" style="margin:0" onclick="equipShopTitle('${item.id}')">Dùng</button>`
+            : `<button class="btn btn-sm btn-green" style="margin:0" onclick="equipEntryFx('${item.id}')">Bật</button>`)
+      : `<button class="btn btn-sm btn-gold" style="margin:0" onclick="buyShopItem('${item.id}')">Mua</button>`}
+  </div>`;
+}
+window.buyShopItem=async function(id){
+  if(!me)return;
+  ensureUserExtras(me);
+  const item=SHOP_ITEMS.find(x=>x.id===id);
+  if(!item){toast('Không tìm thấy vật phẩm');return}
+  if(id==='fx_admin'){toast('Hiệu ứng Admin không bán — chỉ Admin mới có');return}
+  const inv=me.inventory;
+  if(item.type==='avatar'&&(inv.avatars||[]).includes(id)){toast('Đã sở hữu');return}
+  if(item.type==='title'&&(inv.titles||[]).includes(id)){toast('Đã sở hữu');return}
+  if(item.type==='entryFx'&&(inv.entryFx||[]).includes(id)){toast('Đã sở hữu');return}
+  const price=item.price||0;
+  if(price>0){
+    const ok=await changeCoinsTx(me.username,-price);
+    if(!ok){toast('Không đủ tiền!');return}
+  }
+  if(item.type==='avatar'){if(!inv.avatars)inv.avatars=[];inv.avatars.push(id)}
+  if(item.type==='title'){if(!inv.titles)inv.titles=[];inv.titles.push(id)}
+  if(item.type==='entryFx'){if(!inv.entryFx)inv.entryFx=['none'];if(!inv.entryFx.includes(id))inv.entryFx.push(id)}
+  me.inventory=inv;
+  saveMe();
+  SFX.cashout();
+  toast('Đã mua '+item.name);
+  showShop();
+  refreshMyCoin();
+};
+window.equipShopAvatar=function(id){
+  if(!me)return;ensureUserExtras(me);
+  const item=SHOP_ITEMS.find(x=>x.id===id);
+  if(!item||!(me.inventory.avatars||[]).includes(id)){toast('Chưa sở hữu');return}
+  me.avatar=item.icon;
+  saveMe();
+  document.getElementById('myTag').textContent=(me.avatar||'👤')+' '+me.displayName;
+  toast('Đã trang bị avatar '+item.icon);
+  showShop();
+};
+window.equipShopTitle=function(id){
+  if(!me)return;ensureUserExtras(me);
+  const item=SHOP_ITEMS.find(x=>x.id===id);
+  if(!item||!(me.inventory.titles||[]).includes(id)){toast('Chưa sở hữu');return}
+  me.title=item.name;
+  saveMe();
+  toast('Đã trang bị danh hiệu: '+item.name);
+  showShop();
+};
+window.equipEntryFx=function(id){
+  if(!me)return;ensureUserExtras(me);
+  if(id==='fx_admin'){
+    if(!me.isAdmin){toast('Chỉ Admin mới dùng được hiệu ứng này');return}
+    me.entryFx='fx_admin';
+    saveMe();
+    toast('Đã bật hiệu ứng Admin — mọi người sẽ nhận ra bạn');
+    showShop();
+    return;
+  }
+  if(id!=='none'&&!(me.inventory.entryFx||[]).includes(id)){toast('Chưa sở hữu');return}
+  me.entryFx=id;
+  saveMe();
+  toast(id==='none'?'Đã tắt hiệu ứng vào phòng':'Đã bật hiệu ứng vào phòng');
+  showShop();
+};
+function playEntryFx(userObj){
+  if(!userObj)return;
+  ensureUserExtras(userObj);
+  let fx=userObj.entryFx||'none';
+  // Admin luôn hiện FX admin nếu đang bật hoặc mặc định isAdmin
+  if(userObj.isAdmin && (fx==='fx_admin' || fx==='none' || !fx)){
+    // chỉ ép fx_admin khi admin đã chọn hoặc chưa chọn gì (để nhận diện)
+    if(fx==='fx_admin' || !userObj.entryFx || userObj.entryFx==='none'){
+      // nếu admin cố ý tắt (none) thì không ép — nhưng lần đầu vào app entryFx=none
+      // User yêu cầu: hiệu ứng admin chỉ admin có, để mọi người biết ai là admin
+      // → khi isAdmin và entryFx là fx_admin thì hiện; nếu none thì vẫn hiện nhẹ badge admin
+      if(fx!=='fx_admin'){
+        // hiện mini badge admin thay vì full FX khi tắt
+        fx = 'fx_admin';
+      }
+    }
+  }
+  if(fx==='none')return;
+  if(fx==='fx_admin' && !userObj.isAdmin)return; // không ai mua/giả được
+  const overlay=document.createElement('div');
+  overlay.className='entry-fx-overlay';
+  if(fx==='fx_admin') overlay.classList.add('entry-fx-admin');
+  else if(fx==='fx_fire') overlay.classList.add('entry-fx-fire');
+  else if(fx==='fx_gold') overlay.classList.add('entry-fx-gold');
+  else if(fx==='fx_rainbow') overlay.classList.add('entry-fx-rainbow');
+  const name=userObj.displayName||userObj.username;
+  const icons={fx_admin:'⚙️👑',fx_fire:'🔥💥',fx_gold:'✨💰',fx_rainbow:'🌈⭐'};
+  overlay.innerHTML=`<div style="font-size:48px">${icons[fx]||'✨'}</div>
+    <div class="entry-name">${escHtml(name)}</div>
+    <div class="entry-sub">${userObj.isAdmin?'👑 ADMIN ĐÃ VÀO PHÒNG':'đã vào phòng'}${userObj.title?' · '+escHtml(userObj.title):''}</div>`;
+  document.body.appendChild(overlay);
+  if(fx==='fx_admin'){SFX.tour();if(typeof fxConfetti==='function')fxConfetti(['👑','⚙️','💰','⭐','🔥'])}
+  else if(fx==='fx_fire'){SFX.start();if(typeof fxConfetti==='function')fxConfetti(['🔥','💥','✨'])}
+  else if(fx==='fx_gold'){SFX.cashout();if(typeof fxConfetti==='function')fxConfetti(['✨','💰','⭐'])}
+  else if(fx==='fx_rainbow'){SFX.levelup();if(typeof fxConfetti==='function')fxConfetti(['🌈','⭐','🎉','💫'])}
+  setTimeout(()=>overlay.remove(),2900);
+}
+
 function saveMe(){
   if(!me)return;
   const users=getUsers();
